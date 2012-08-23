@@ -6,7 +6,7 @@ license: OtherLicense
 license-file: "LICENSE-2.0.txt"
 copyright: (c) 2010-2012 Cognimeta Inc.
 maintainer: Patrick Premont <ppremont@cognimeta.com>
-homepage:
+homepage: https://github.com/Cognimeta/perdure
 package-url:
 bug-reports:
 synopsis: Robust persistence for acyclic immutable data
@@ -189,6 +189,10 @@ library
 
   ghc-options: -rtsopts -fcontext-stack=80 -O2 -funfolding-use-threshold=24 -pgmP cpphs -optP --cpp
   extensions: 
+
+source-repository head
+  type:     git
+  location: git://github.com/Cognimeta/perdure.git
 
 executable perdure
   hs-source-dirs: exe-src
