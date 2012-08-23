@@ -26,6 +26,7 @@ import qualified Test.QuickCheck as QC
 import Test.QuickCheck.Arbitrary
 import System.Environment
 import Language.Haskell.TH
+import Database.Perdure.TestState
 import Database.Perdure.TestPersistent
 import Database.Perdure.TestSeqPersistent
 import Database.Perdure.TestStoreFile
@@ -52,8 +53,7 @@ mains = [
     $(label 'testPersistentMap),
   $(label 'testSeqPersistent),
     $(label 'testStates),
-  $(label 'testState2),
-    $(label 'testState2Dag),
-  $(label 'testStatesDestroysRaw1),
+    $(label 'testStatesDag),
+  -- $(label 'testStatesDestroysRaw1),
     $(label 'testMap)
   ]

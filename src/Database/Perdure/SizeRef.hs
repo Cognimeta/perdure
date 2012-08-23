@@ -28,6 +28,8 @@ import Database.Perdure.StoreFile
 import Cgm.Data.Nat
 import Data.Dynamic
 
+-- | A reference type which automatically puts its referent is a separately loadable allocation when that
+-- allocation's size is greater than 2^n bytes.
 data SizeRef n a = TooSmallForRef !a  | LargeEnoughForRef !(DRef a) deriving Typeable
 deriving instance Show a => Show (SizeRef n a)
 

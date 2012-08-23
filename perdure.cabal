@@ -110,7 +110,8 @@ description:
 	     process. This will be a more involved addition so it will require distributed garbage collection such as
 	     weighted reference counting.
 	     .
-	     * Documentation is not sufficient and should be our first focus.
+	     * Documentation and examples are not sufficient and should be our first focus. For a minimal example,
+	     look at Database.Perdure.TestState.testStatesF in exe-src.
 	     .
 	     Given those limitation, Perdure™ is not applicable for very large scale projects at the moment. But it can
 	     be ideal for smaller projects where there is no point in burdening the developer with a distinct data
@@ -123,7 +124,7 @@ description:
 	     Perdure™ has been developped by Cognimeta Inc. over the past two years. We are releasing this as open
 	     source under the permissive Apache license 2.0. The persistence mechanism is relatively simple and concise
 	     and its open source nature can provide the inquisitive user with added confidence about the security of its
-	     data.  Also Cognimeta has been using Haskell exclusively, and has benefited considerably from numerous
+	     data.  Also Cognimeta has been using Haskell exclusively, and has benefited from many
 	     excellent open source libraries. We are happy to contribute back, and are hoping for constructive and
 	     critical feedback from this very bright community.
 category: Databases

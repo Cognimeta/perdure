@@ -24,6 +24,7 @@ module Database.Perdure.State(
   writeState,
   --asyncWriteState,
   updateState,
+  updateStateRead,
   --asyncCollectState,
   collectState,
   collectStateM,
@@ -189,8 +190,13 @@ writeState a r = await0 $ asyncWriteState a r
 -- | Writes a new state if the passed state change requires it. The StateT monad used here is like the usual StateT monad but
 -- it has an additional 'unchanged' case which allow us to avoid needless writes.
 updateState :: (Persistent a, Persistent (c Address), Multiset c, Persistent s, Space s, Typeable1 c, Typeable a, Typeable s) => 
+               M.StateT a IO b -> M.StateT (RootState Identity c s a) IO b
+updateState = updateStateRead . M.mapStateT lift
+
+-- | Like updateState but the updater has access to the input RootState throught an additional ReaderT
+updateStateRead :: (Persistent a, Persistent (c Address), Multiset c, Persistent s, Space s, Typeable1 c, Typeable a, Typeable s) => 
                M.StateT a (ReaderT (RootState Identity c s a) IO) b -> M.StateT (RootState Identity c s a) IO b
-updateState (M.StateT u) = 
+updateStateRead (M.StateT u) = 
   M.StateT $ \t -> runReaderT (u (deref $ rootValue $ rootScan $ runIdentity $ stateRoot t)) t 
                    >>= \(b, ma') -> fmap (b,) $ maybe (return Nothing) (fmap Just . flip writeState t) ma'
 
