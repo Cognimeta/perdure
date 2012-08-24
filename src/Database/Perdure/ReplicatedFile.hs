@@ -34,7 +34,7 @@ instance StoreFile ReplicatedFile where
     foldr (\f retry -> await1 (storeFileRead1 f addr size e v) >>= maybe retry (k . Just)) (k Nothing) fs 
   
 instance SyncableStoreFile ReplicatedFile where
-  storeFileSync (ReplicatedFile fs) = withNotificationCount $ \n -> sequence_ $ (\s -> notifying n $ storeFileSync s) <$> fs
+  storeFileSync (ReplicatedFile fs) = withNotificationCount $ \n -> sequence_ $ (notifying n . storeFileSync) <$> fs
   storeFileFullBarrier (ReplicatedFile fs) = sequence_ $ storeFileFullBarrier <$> fs
 
 -- TODO see if we can have the user threads perform the digest checks

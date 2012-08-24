@@ -41,7 +41,7 @@ description:
 	     . 
 	     Undetected corruption is virtually impossible even in the presence of drive failures. Each separately
 	     loadable section has a 128-bit digest, and that digest is stored in the reference(s). This approach
-	     alleviates the need low-level storage replication such as RAID, and takes care of replication at the
+	     alleviates the need for low-level storage replication such as RAID, and takes care of replication at the
 	     persistence layer level. This seems appropriate given the increasing need for geographically distributed
 	     replication.
 	     .
@@ -160,7 +160,7 @@ library
     Cgm.Data.Typeable Cgm.Data.Bool Database.Perdure.Package
   other-modules:        
   build-depends:
-    base >= 4.5.0.0,
+    base >= 4.5.0.0 && < 5,
     template-haskell >= 2.7.0.0,
     QuickCheck >=2.4.0.1,
     strict >= 0.3.2,

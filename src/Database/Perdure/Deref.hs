@@ -49,9 +49,9 @@ derefEq = (==) `dot2i` deref
 instance Deref DRef where 
   derefIO (DRef p dc@(DeserializerContext f cv) aRef) = 
     let addr = arrayRefAddr aRef 
-        r = {-trace ("(looking up cache at" ++ show addr ++ " wanting an " ++ show (typeOf r))-} (modifyMVar cv (return . LRU.lookup addr)) >>= 
+        r = {-(trace ("(looking up cache at" ++ show addr ++ " wanting an " ++ show (typeOf r))-} modifyMVar cv (return . LRU.lookup addr) >>= 
             maybe 
-            ((>>= \a -> evaluate a >> (a <$ modifyMVar_ cv (return . ({-trace ("adding to cache at" ++ show addr) $-} LRU.insert addr $ toDyn a)))) $
+            ((>>= \a -> evaluate a >> (a <$ modifyMVar_ cv (return . {-(trace ("adding to cache at" ++ show addr) $-} LRU.insert addr (toDyn a)))) $
              fmap (maybe (error "Read error") $ deserializeFromFullArray (cDeser p dc) . (id :: Id (ArrayRange (PrimArray Free Word)))) $
              derefArrayRef f aRef)
             (return . fromMaybe (error $ "Wrong type in cache cell " ++ show addr) . fromDynamic)

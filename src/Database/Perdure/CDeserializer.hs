@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, GADTs, TypeFamilies, RankNTypes, DeriveFunctor, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, GADTs, TypeFamilies, RankNTypes, DeriveFunctor, FlexibleContexts, ScopedTypeVariables #-}
 
 module Database.Perdure.CDeserializer (
   cDeser,
@@ -76,19 +76,20 @@ bitDeserializer = Deserializer $ \bit arr -> DeserOut (let (wIx, bIx) = coarseRe
 
 -- 0 <= n <= wordBits
 partialWordDeserializer :: Len Bool Word -> Deserializer f Word
-partialWordDeserializer n = 
-  if n == 0 then pure 0 else
-  if n == 1 then bitDeserializer else
-  Deserializer $ \bit arr -> 
-  DeserOut (
-    let (wIx, bIx) = coarseRem bit 
-        avail = wordBits - bIx
-        overflow = n - avail
-        n' = wordBits - n
-    in bool (indexArray arr wIx `partialShiftL` getLen (n' - bIx) `partialShiftRL` getLen n') 
-       ((indexArray arr wIx `partialShiftRL` getLen bIx) + (indexArray arr (wIx + 1) `partialShiftL` getLen (wordBits - overflow) `partialShiftRL` getLen n')) $ 
-       (signed $* getLen overflow) > 0)
-  (bit + n)
+partialWordDeserializer n
+  | n == 0 = pure 0
+  | n == 1 = bitDeserializer
+  | otherwise =
+    Deserializer $ \bit arr -> 
+    DeserOut (
+      let (wIx, bIx) = coarseRem bit 
+          avail = wordBits - bIx
+          overflow = n - avail
+          n' = wordBits - n
+      in bool (indexArray arr wIx `partialShiftL` getLen (n' - bIx) `partialShiftRL` getLen n') 
+         ((indexArray arr wIx `partialShiftRL` getLen bIx) + (indexArray arr (wIx + 1) `partialShiftL` getLen (wordBits - overflow) `partialShiftRL` getLen n')) $ 
+         (signed $* getLen overflow) > 0)
+    (bit + n)
 
 ---------------------------------------------------------------------------
 
@@ -100,7 +101,7 @@ instance Deserializable Word32 where
                  (primArrayMatchAllocation $ retract wordConvArrayRange a) 
                  (fullArrayRange $ mkArrayWith (coarsenLen $ arrayLen a) $ 
                         (\i -> retract wordConv $ retract splitWord64LE 
-                               (indexArray a i, if (i + 1 < arrayLen a) then indexArray a (i + 1) else 0)) . refineLen) -- TODO: test
+                               (indexArray a i, if i + 1 < arrayLen a then indexArray a (i + 1) else 0)) . refineLen) -- TODO: test
 instance Deserializable Word64 where
   deserInput a = onWordConv
                  (fullArrayRange $ mkArrayWith (refineLen $ arrayLen a) $ 

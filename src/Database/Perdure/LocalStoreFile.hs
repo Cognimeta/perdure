@@ -130,8 +130,8 @@ narrowBufsLen :: Endian w => [PrimArray Pinned w] -> Len w Word32
 narrowBufsLen = (fromMaybe (error "Array length cannot be expressed as a Word32") . unapply super <$>) . sum . fmap arrayLen
 
 storeFileWrite1 :: (RawStoreFile f, Endian w) => f -> Len Word64 Word64 -> Endianness -> [PrimArray Pinned w] -> IO ()
-storeFileWrite1 f addr e bufs = do
-    storeFileWriteWords f (refineLen addr) e bufs (bool (error "storeFileWrite failed") $ return ()) -- TODO pass a meaningful k
+storeFileWrite1 f addr e bufs =
+    storeFileWriteWords f (refineLen addr) e bufs $ bool (error "storeFileWrite failed") $ return () -- TODO pass a meaningful k
 
 storeFileRead1 :: (RawStoreFile f, Validator v, ValidatedElem v ~ w, Endian w, LgMultiple w Word8) => 
                    f -> Len Word64 Word64 -> Len w Word32 -> Endianness -> v -> Async (Maybe (ArrayRange (PrimArray Pinned w))) ()
@@ -267,11 +267,11 @@ fdSeekLen fd seek = () <$ fdSeek fd AbsoluteSeek (toFileOffset seek)
 -- | Array's size and start must be aligned on the block size, and the ByteAddr too.
 fdReadArray :: Fd -> ByteAddr -> ArrayRange (STPrimArray RealWorld Pinned Word8) -> ErrorT () IO ()
 fdReadArray fd start a = ErrorT $ fmap (boolEither () () . (==) (toByteCount $ arrayLen a)) $ 
-                         fdSeekLen fd start >> flip withArrayPtr a (\ptr len -> fdReadBuf fd ptr $ toByteCount len)
+                         fdSeekLen fd start >> withArrayPtr (\ptr len -> fdReadBuf fd ptr $ toByteCount len) a
 
 fdWriteArray :: Fd -> ByteAddr -> ArrayRange (STPrimArray RealWorld Pinned Word8) -> ErrorT () IO ()
 fdWriteArray fd start a = ErrorT $ fmap (boolEither () () . (==) (toByteCount $ arrayLen a)) $ 
-                          fdSeekLen fd start >> flip withArrayPtr a (\ptr len -> fdWriteBuf fd ptr $ toByteCount len)
+                          fdSeekLen fd start >> withArrayPtr (\ptr len -> fdWriteBuf fd ptr $ toByteCount len) a
 
 -- A bit of info on raw devices that i did not find easily elsewhere: http://www.win.tue.nl/~aeb/linux/lk/lk-11.html#ss11.4
 
@@ -310,17 +310,17 @@ withBlockArray r@(RawDevice fd _ lgBlockBytes) seek len f =
       len' = getLen len
       start = (seek' `shiftR` lgBlockBytes) `shiftL` lgBlockBytes
       end = ((seek' + len' + up (getLen blockBytes) - 1) `shiftR` lgBlockBytes) `shiftL` lgBlockBytes
-  in (liftIO $ stToIO $ newAlignedPinnedWord8Array blockBytes $ unsafeLen $ fromJust $ unapply super $ end - start) >>= 
-     (\r -> f (unsafeLen start) $
-            -- trace ("withBlockArray blockBytes=" ++ show blockBytes ++ " start=" ++ show (unsafeLen start) ++ " size=" ++ (show $ arrayLen r))
-            r)
+  in liftIO (stToIO $ newAlignedPinnedWord8Array blockBytes $ unsafeLen $ fromJust $ unapply super $ end - start) >>= 
+     \r -> f (unsafeLen start)
+           -- $ trace ("withBlockArray blockBytes=" ++ show blockBytes ++ " start=" ++ show (unsafeLen start) ++ " size=" ++ (show $ arrayLen r))
+           r
   
 withRawFile :: (RawFile f, Show f) => f -> (LocalStoreFile -> IO a) -> IO a
 withRawFile f user = do
   chan <- newEmptyMVar
   runWithDeamon 
     ("User of " ++ show f, user $ LocalStoreFile chan) 
-    ("Server for " ++ show f, bracket (return ()) (const $ putStrLn $ "Server for " ++ show f ++ " ended") $ const $ process chan f (emptySchedule :: CLook))
+    ("Server for " ++ show f, bracket_ (return ()) (putStrLn $ "Server for " ++ show f ++ " ended") $ process chan f (emptySchedule :: CLook))
 
 -- Note using raw devices should improve performance (See http://en.wikipedia.org/wiki/Raw_device)
 

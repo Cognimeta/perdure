@@ -105,8 +105,8 @@ run2 (n1, task1) (n2, task2) = do
         throwTo tl PeerTaskException
         atomically (getJust ml) >>= either exl (const $ throw wrappedFirst) where
           wrappedFirst = wf ef
-          exl el = maybe twoExceptions (const $ throw wrappedFirst) $ (fromException el :: Maybe PeerTaskException) where
-            twoExceptions = (throw $ ConcurrentExceptions (SomeException $ wl el) (SomeException wrappedFirst))
+          exl el = maybe twoExceptions (const $ throw wrappedFirst) (fromException el :: Maybe PeerTaskException) where
+            twoExceptions = throw $ ConcurrentExceptions (SomeException $ wl el) (SomeException wrappedFirst)
       normal ((cancel, intermediate), _) = do
         when cancel $ throwTo tl Abort
         final <- atomically (getJust ml) >>= either (throw . wl) (return . snd)

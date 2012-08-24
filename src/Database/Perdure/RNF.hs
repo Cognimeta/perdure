@@ -31,7 +31,7 @@ import Database.Perdure.CRef
 prnf :: Persister a -> a -> ()
 prnf p = case p of
   PartialWordPersister n -> (`seq` ())
-  PairPersister pa pb -> \(a, b) -> (prnf pa a) `seq` (prnf pb b)
+  PairPersister pa pb -> \(a, b) -> prnf pa a `seq` prnf pb b
   EitherPersister pa pb -> either (prnf pa) (prnf pb)
   ViewPersister i pb -> prnf pb . apply i
   SummationPersister pi _ s -> s (\i pb _ b -> prnf pi i `seq` prnf pb b)

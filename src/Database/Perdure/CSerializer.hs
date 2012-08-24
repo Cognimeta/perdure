@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances, TupleSections, ScopedTypeVariables, MagicHash, UnboxedTuples, BangPatterns, GADTs #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances, TupleSections, ScopedTypeVariables, MagicHash, UnboxedTuples, BangPatterns, GADTs #-}
 
 module Database.Perdure.CSerializer (
   SerializerContext,
@@ -65,7 +65,7 @@ import Debug.Trace
 
 type CountDest c = Maybe (MVar (c Address))
 addCount :: Multiset c => Address -> CountDest c -> IO ()
-addCount a = maybe (return ()) $ flip modifyMVar_ (return . (MS.insert a))
+addCount a = maybe (return ()) $ flip modifyMVar_ $ return . MS.insert a
 type SerializerContext l c = (MVar Cache, l, CountDest c) -- TODO create type with strict fields
 
 -- TODO: consider testing whether returning a CSer (Maybe a) might be more performant, where Nothing represent the input a
@@ -74,7 +74,10 @@ type Dest = ABitSeq RealWorld
 
 cSer :: (Multiset c, Allocator l) => Persister a -> SerializerContext l c -> (a -> Dest -> IO z) -> a -> Dest -> IO z
 cSer !p !sc !k !a !d = case p of
-  PartialWordPersister n -> if n == wordBits then (stToIO $ addWord a d) >>= k a else if n == 0 then k a d else (stToIO $ addBits n a d) >>= k a 
+  PartialWordPersister n
+    | n == wordBits -> stToIO (addWord a d) >>= k a
+    | n == 0 -> k a d
+    | otherwise -> stToIO (addBits n a d) >>= k a 
   PairPersister pb pc -> case a of (b, c) -> cSer pb sc (\b' -> cSer pc sc (\c' -> k (b', c')) c) b d
   EitherPersister pb pc -> either (\b -> stToIO (addBit 0 d) >>= cSer pb sc (k . Left) b) (\c -> stToIO (addBit 1 d) >>= cSer pc sc (k . Right) c) a
   ViewPersister i pb -> cSer pb sc (k . fromJust . unapply i) (apply i a) d
@@ -123,9 +126,9 @@ mkDRef sc@(cache, l, _) p ma = writeDRef p ma (DeserializerContext (allocatorSto
 writeDRef :: (Allocator l, BitSrc s, SrcDestState s ~ RealWorld, Typeable a) => 
              Persister a -> Maybe a -> DeserializerContext -> l -> s -> s -> IO (DRef a)
 writeDRef p ma dc@(DeserializerContext _ c) l start end = 
-  DRef p dc <$> (maybe id (\a -> (>>= \w -> w <$ addToCache a w)) ma $ allocCopyBits start end >>= writeArrayRef l) where
+  DRef p dc <$> maybe id (\a -> (>>= \w -> w <$ addToCache a w)) ma (allocCopyBits start end >>= writeArrayRef l) where
   addToCache a w = let addr = arrayRefAddr w in modifyMVar_ c $ 
-                                                return . ({-trace ("writing/adding to cache at" ++ show addr) $ -}LRU.insert addr $ toDyn a)
+                                                return . {-(trace ("writing/adding to cache at" ++ show addr) $ -}LRU.insert addr (toDyn a)
   
 -- | The passed Persister must hace no references
 {-# NOINLINE serializeToArray #-}
@@ -133,7 +136,7 @@ serializeToArray :: AllocCopy w => Persister a -> a -> PrimArray Pinned w
 serializeToArray p a = unsafePerformIO $ do
   start <- stToIO mkABitSeq 
   noCache <- newMVar $ LRU.fromList Nothing []
-  cSer p (noCache, NoAllocator, (Nothing :: CountDest MapMultiset)) (const $ allocCopyBits start) a start
+  cSer p (noCache, NoAllocator, Nothing :: CountDest MapMultiset) (const $ allocCopyBits start) a start
                              
 data NoAllocator = NoAllocator
 instance Allocator NoAllocator where

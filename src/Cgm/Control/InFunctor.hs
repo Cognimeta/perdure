@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, ScopedTypeVariables, GeneralizedNewtypeDeriving, FlexibleContexts, TypeFamilies, TypeOperators, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, ScopedTypeVariables, GeneralizedNewtypeDeriving, FlexibleContexts, TypeFamilies, TypeOperators #-}
 
 module Cgm.Control.InFunctor (
     Function(..),
@@ -245,7 +245,7 @@ instance (Functor f, Cofunctor c) => Cofunctor (Compose f c) where
   (>$<) = functorCofunctorComap -- TODO: cleanup: There is an alternative defintion so a newtype would be required to indicate which is desired
   
 functorCofunctorComap :: (Functor f, Cofunctor c) => (Compose f c) b -> (a -> b) -> (Compose f c) a
-functorCofunctorComap (Compose c) abf = Compose $ ((>$< abf) <$> c)
+functorCofunctorComap (Compose c) abf = Compose $ (>$< abf) <$> c
 
 -- See definition of Monoidal in http://strictlypositive.org/IdiomLite.pdf
 -- If the superclass is changed to Cofunctor (or an exponential functor), it seems the Monoidal laws can be adapted.
@@ -258,9 +258,9 @@ class Comonoidal f where
   
 instance Monoid m => Comonoidal (RevFun m) where
   munit = mempty
-  mpair (RevFun fa) (RevFun fb) = RevFun $ (uncurry $ mappend `dot2` fa $ fb)
+  mpair (RevFun fa) (RevFun fb) = RevFun $ uncurry $ mappend `dot2` fa $ fb
 instance Monoid m => Comonoidal (Constant m) where
-  munit = Constant $ mempty
+  munit = Constant mempty
   mpair (Constant fa) (Constant fb) = Constant $ mappend fa fb
 instance (Applicative a, Comonoidal c) => Comonoidal (Compose a c) where
   munit = Compose $ pure munit
@@ -276,7 +276,7 @@ cofunctorIacomap f g = f >$< apply g
 
 -----
 
-wrapU :: (Bijection og, Function i1g) => og o o' -> i1g i1 i1' -> (i1' -> o') -> (i1 -> o)
+wrapU :: (Bijection og, Function i1g) => og o o' -> i1g i1 i1' -> (i1' -> o') -> i1 -> o
 wrapU o i1 f = retract o . f . (i1 $*)
 wrapB :: (Bijection og, Function i1g, Function i2g) => og o o' -> i1g i1 i1' -> i2g i2 i2' -> (i1' -> i2' -> o') -> i1 -> i2 -> o
 wrapB o i1 i2 f = retract o ./ dot2 f (i1 $*) (i2 $*)

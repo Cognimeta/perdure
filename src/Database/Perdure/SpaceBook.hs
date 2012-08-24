@@ -30,7 +30,6 @@ import Database.Perdure.ReplicatedFile
 import Cgm.Data.Multiset as MS
 import Debug.Trace
 import Cgm.Data.Super
-import Database.Perdure.Persistent
 import Database.Perdure.Package
 import Cgm.Data.Typeable
 

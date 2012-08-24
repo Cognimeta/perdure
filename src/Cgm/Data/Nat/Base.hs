@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, TypeFamilies, Rank2Types, FlexibleContexts, GADTs, EmptyDataDecls, TypeOperators, DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, TypeFamilies, Rank2Types, FlexibleContexts, GADTs, TypeOperators, DeriveDataTypeable #-}
 
 module Cgm.Data.Nat.Base (
     D0,
@@ -142,7 +142,7 @@ subI :: Nat b =>  ((b :-: b) ~ D0 => z) -> Tagged b z
 subI z = onNat z $ subI z
 
 subS :: forall a b z. (Nat a, Nat b, Nat (a :-: b)) => ((Succ a :-: b) ~ Succ (a :-: b) => z) -> Tagged2 a b z
-subS z = on2Nats z (tag $ (at :: At (a :-: b)) $ badNat) (tag z) $ subS z
+subS z = on2Nats z (tag $ (at :: At (a :-: b)) badNat) (tag z) $ subS z
 
 addSubI :: forall a b z. (Nat a, Nat b) => (((a :+: b) :-:  b) ~ a => z) -> Tagged2 a b z
 addSubI z = on2Nats z (dupTag $ addZ $ (at :: At D0) $ addSubI z)
@@ -154,7 +154,7 @@ addSub z = onNat ((at2 :: At2 b (b :-: c)) $ addZ $ addZ $ tag2 z) addSubS where
   addSubS = addSub $ 
              (at2 :: At2 a' (b :-: c)) $ addSC $
              (at2 :: At2 a' b) $ addSC $
-             (at2 :: At2 (a' :+: b) c) $ subS $ z
+             (at2 :: At2 (a' :+: b) c) $ subS z
 
 --subRS :: forall a b z. (Nat a, Nat (b :-: Succ a)) => (Succ (b :-: Succ a) ~ (b :-: a) => z) -> Tagged2 a b z
 

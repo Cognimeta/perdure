@@ -22,7 +22,6 @@ module Database.Perdure.History (
   updateHistoryM
   ) where
 
-import Control.Arrow
 import Data.Bits
 import Database.Perdure.Persistent
 import Control.Arrow

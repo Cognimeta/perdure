@@ -76,23 +76,24 @@ deriveStructured :: Name -> Q [Dec]
 deriveStructured typName =
   do (TyConI d) <- reify typName
      (type_name,tvars,_,constructors) <- typeInfo (return d)
-     appliedType <- appsT ((conT' type_name) : map (varT . fromTyVar) tvars)
-     let structureType = (tySynInstD (mkName "Structure") [return appliedType]
-                                     (nestedEitherT (map (nestedTupT . (map (return . snd)) . snd) constructors)))
-         structureFun = do clauses <- sequence $ (map structureClause constructors)
+     appliedType <- appsT $ conT' type_name : map (varT . fromTyVar) tvars
+     let structureType = tySynInstD (mkName "Structure") [return appliedType] $
+                                     nestedEitherT $ map (nestedTupT . map (return . snd) . snd) constructors
+         structureFun = do clauses <- mapM structureClause constructors
                            return $ FunD (mkName "structure") $ addETags clauses
-         structureClause (conName, components) = do vars <- newNames "a" components
-                                                    (clause [(conP conName (map varP vars))]
-                                                            (normalB (nestedTupE (map varE vars))) [])
-         fromStructureFun = do clauses <- sequence $ (map fromStructureClause constructors)
-                               return $ FunD (mkName "fromStructure") $ addPTags clauses
-         fromStructureClause (conName, components) = do vars <- newNames "s" components
-                                                        (clause [(nestedTupP (map varP vars))]
-                                                                (normalB (appsE ((conE conName) : (map varE vars)))) [])
-         in sequence [instanceD (cxt []) (appT (conT (mkName "Structured")) (return appliedType))
+         structureClause (conName, components) =
+           do vars <- newNames "a" components
+              clause [conP conName $ map varP vars] (normalB $ nestedTupE $ map varE vars) []
+         fromStructureFun =
+           do clauses <- mapM fromStructureClause constructors
+              return $ FunD (mkName "fromStructure") $ addPTags clauses
+         fromStructureClause (conName, components) =
+           do vars <- newNames "s" components
+              clause [nestedTupP $ map varP vars] (normalB (appsE (conE conName : map varE vars))) []
+         in sequence [instanceD (cxt []) (appT (conT $ mkName "Structured") (return appliedType))
                                 [structureType, structureFun, fromStructureFun]]
 
-conT' name = if (nameBase name == "[]") then listT else conT name
+conT' name = if nameBase name == "[]" then listT else conT name
 
 -- A foldr with special cases for empty lists and singletons
 nested :: b -> (a -> b) -> (a -> b -> b) -> [a] -> b
@@ -105,8 +106,8 @@ nestedTupT = nested (tupT []) id (\a b -> tupT [a, b])
 nestedTupP = nested (tupP []) id (\a b -> tupP [a, b])
 nestedEitherT = nested (error "nestedEitherT []") id eitherT
 
-addETags = nested [] return (\c cs -> (mapClauseBodyE leftETag c) : map (mapClauseBodyE rightETag) cs)
-addPTags = nested [] return (\c cs -> (mapClausePat1 leftPTag c) : map (mapClausePat1 rightPTag) cs)
+addETags = nested [] return $ \c cs -> mapClauseBodyE leftETag c : map (mapClauseBodyE rightETag) cs
+addPTags = nested [] return $ \c cs -> mapClausePat1 leftPTag c : map (mapClausePat1 rightPTag) cs
 leftETag = AppE $ ConE $ mkName "Left"
 rightETag = AppE $ ConE $ mkName "Right"
 leftPTag p = ConP (mkName "Left") [p]
@@ -119,17 +120,17 @@ mapBodyE f (NormalB e) = NormalB $ f e
 appsT :: [TypeQ] -> TypeQ
 appsT [] = error "appsT []"
 appsT [x] = x
-appsT (x:y:zs) = appsT ( (appT x y) : zs )
+appsT (x:y:zs) = appsT $ appT x y : zs
 
-tupT ts = appsT ((tupleT (length ts)) : ts)
+tupT ts = appsT $ tupleT (length ts) : ts
 
-eitherT ta tb = appsT [(conT (mkName "Either")), ta, tb]
+eitherT ta tb = appsT [conT (mkName "Either"), ta, tb]
 
 fromTyVar :: TyVarBndr -> Name
 fromTyVar (PlainTV v) = v
 fromTyVar (KindedTV v _) = v
 
-newNames prefix list = mapM (\c -> newName prefix) list
+newNames prefix = mapM $ const $ newName prefix
 
 -- And some borrowed helper code taken from Syb III / replib 0.2
 
@@ -137,10 +138,10 @@ typeInfo :: DecQ -> Q (Name, [TyVarBndr], [(Name, Int)], [(Name, [(Maybe Name, T
 typeInfo m =
      do d <- m
         case d of
-           d@(DataD _ _ _ _ _) ->
-            return $ (simpleName $ name d, paramsA d, consA d, termsA d)
-           d@(NewtypeD _ _ _ _ _) ->
-            return $ (simpleName $ name d, paramsA d, consA d, termsA d)
+           d@DataD{} ->
+            return (simpleName $ name d, paramsA d, consA d, termsA d)
+           d@NewtypeD{} ->
+            return (simpleName $ name d, paramsA d, consA d, termsA d)
            _ -> error ("derive: not a data type declaration: " ++ show d)
 
      where

@@ -92,10 +92,10 @@ instance BitSrc (Ptr Word) where
   copyBits = copyWords
 instance WordSrc (Ptr Word) where
   addedWords = (apply unsigned <$>) ./ minusPtrLen
-  copyWords end start d = if (end == start) then return d else ioToST (peek start) >>= \w -> addWord w d >>= copyWords end (start `advancePtrLen` 1)
+  copyWords end start d = if end == start then return d else ioToST (peek start) >>= \w -> addWord w d >>= copyWords end (start `advancePtrLen` 1)
   copyWordsPartial end start dropLow = 
     let len = addedWords end start 
-    in if (len == 0) 
+    in if len == 0
        then undefined 
        else (\d -> ioToST (peek start) >>= \w -> 
               addBits (refineLen word - dropLow) (w `partialShiftRL` getLen dropLow) d) >=> copyWords end (start `advancePtrLen` 1)
@@ -105,7 +105,7 @@ instance WordSrc (Ptr Word) where
 -- With WordSeq we allocate memory as we go, so we do not need a size bound ahead of time.
 -- Here the least significant bits of the words are bits that were added before.
 -- 0 <= index < chunkSize
-data WordSeq s f = WordSeq !((Len Word Word), [STPrimArray s f Word]) {-# UNPACK #-} !(CWordSeq s f)
+data WordSeq s f = WordSeq !(Len Word Word, [STPrimArray s f Word]) {-# UNPACK #-} !(CWordSeq s f)
 
 chunkSize :: Len Word Word
 chunkSize = unsafeLen 2048
@@ -113,7 +113,7 @@ chunkSize = unsafeLen 2048
 {-# INLINE pushAnyFullChunk #-}
 pushAnyFullChunk :: STMkArray (STPrimArray s f Word) => WordSeq s f -> ST s (WordSeq s f)
 pushAnyFullChunk s@(WordSeq (l, r) (CWordSeq a ix)) = 
-  if (ix < chunkSize) then return s else WordSeq (l + chunkSize, a : r) . (`CWordSeq` 0) <$> mkArray chunkSize
+  if ix < chunkSize then return s else WordSeq (l + chunkSize, a : r) . (`CWordSeq` 0) <$> mkArray chunkSize
                                                                                  
 mkWordSeq :: STMkArray (STPrimArray s f Word) => ST s (WordSeq s f)
 mkWordSeq = WordSeq (0, []) . (`CWordSeq` 0) <$> mkArray chunkSize
@@ -128,11 +128,11 @@ instance BitSrc (WordSeq s f) where
 instance WordSrc (WordSeq s f) where
   addedWords (WordSeq (s1, _) c1) (WordSeq (s0, _) c0) = addedWords c1 c0 + (s1 - s0)
   copyWords (WordSeq (s1, r1) c1) start@(WordSeq (s0, _) c0) =
-    if (s1 == s0)
+    if s1 == s0
     then copyWords c1 c0
     else copyWords (WordSeq (s1 - chunkSize, tail r1) $ chunkEnd (head r1)) start >=> copyWords c1 (chunkStart c1)
   copyWordsPartial (WordSeq (s1, r1) c1) start@(WordSeq (s0, _) c0) =
-    if (s1 == s0)
+    if s1 == s0
     then copyWordsPartial c1 c0
     else \drop -> copyWordsPartial (WordSeq (s1 - chunkSize, tail r1) $ chunkEnd (head r1)) start drop >=> copyWords c1 (chunkStart c1)
  
@@ -154,9 +154,9 @@ instance BitSrc (CWordSeq s f) where
 instance WordSrc (CWordSeq s f) where
   addedWords (CWordSeq _ n1) (CWordSeq _ n0) = n1 - n0
   copyWords end@(CWordSeq a i1) (CWordSeq _ i0) d =
-    if (i1 == i0) then return d else readArray a i0 >>= flip addWord d >>= copyWords end (CWordSeq a $ i0 + 1)
+    if i1 == i0 then return d else readArray a i0 >>= flip addWord d >>= copyWords end (CWordSeq a $ i0 + 1)
   copyWordsPartial end@(CWordSeq a i1) (CWordSeq _ i0) dropLow d =
-    if (i1 == i0) then undefined 
+    if i1 == i0 then undefined 
     else do 
       w <- readArray a i0
       addBits (refineLen word - dropLow) (w `partialShiftRL` getLen dropLow) d >>= copyWords end (CWordSeq a $ i0 + 1)
@@ -170,7 +170,7 @@ type BSer d = BitAcc d -> SrcDestST (BitAcc d) (BitAcc d)
 
 {-# INLINE onAlignment #-}
 onAlignment :: (d -> z) -> (BitAcc d -> z) -> BitAcc d -> z
-onAlignment a u bd@(BitAcc b _ d) = if (b == 0) then a d else u bd
+onAlignment a u bd@(BitAcc b _ d) = if b == 0 then a d else u bd
 
 aligned :: d -> BitAcc d
 aligned = BitAcc 0 0
@@ -210,7 +210,7 @@ instance WordDest d => BitDest (BitAcc d) where
        else aligned <$> addWord acc' d
 instance WordSrc d => BitSrc (BitAcc d) where
   copyBits (BitAcc endB endAcc end) (BitAcc startB _ start) =
-    if (addedWords end start == 0) 
+    if addedWords end start == 0
     then addBits (unsafeLen $ endB - startB) (endAcc `partialShiftRL` startB)
     else copyWordsPartial end start (unsafeLen startB) >=> addBits (unsafeLen endB) endAcc
   addedBits (BitAcc b1 _ d1) (BitAcc b0 _ d0) = refineLen (addedWords d1 d0) + unsafeLen (b1 - b0)

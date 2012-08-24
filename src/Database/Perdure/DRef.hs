@@ -11,8 +11,6 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, ScopedTypeVariables, ExistentialQuantification, TypeFamilies, FlexibleInstances, UndecidableInstances, EmptyDataDecls #-}
-
 module Database.Perdure.DRef (
   module Database.Perdure.Deref,
   module Database.Perdure.StoreFile,
@@ -20,14 +18,8 @@ module Database.Perdure.DRef (
   module Database.Perdure.WordNArrayRef
   ) where
 
-import Prelude ()
-import Cgm.Prelude
-import Cgm.Data.Word
 import Database.Perdure.WordArrayRef
 import Database.Perdure.WordNArrayRef
 import Database.Perdure.Deref
-import Database.Perdure.CSerializer
-import Database.Perdure.CDeserializer
 import Database.Perdure.StoreFile
-import Database.Perdure.WValidator
 

@@ -46,14 +46,14 @@ unsafeBSToWordHash f input = unsafePrimArrayCast $ arrayFromByteString $ unsafeP
 unsafeFixedEndianToWordHash :: forall r. (PinnedArray r, ImmArray r, Endian (ArrayElem r), Prim (ArrayElem r)) => 
                                Endianness -> (B.ByteString -> B.ByteString) -> r -> PrimArray Free (ArrayElem r)
 unsafeFixedEndianToWordHash e f = 
-  if (platformWordEndianness == e) 
+  if platformWordEndianness == e
   then unsafeBSToWordHash f
   else mapImmArray unswapBytes . (id :: Id (PrimArray Free (ByteSwapped w))) . 
        unsafeBSToWordHash f . (id :: Id (PrimArray Pinned (ByteSwapped (ArrayElem r)))) . 
        mapImmArray swapBytes
 
 word128FromArray32LE :: PrimArray f Word32 -> Word128
-word128FromArray32LE a = word128BE (retract splitWord64LE $ (indexArray a 2, indexArray a 3)) (retract splitWord64LE $ (indexArray a 0, indexArray a 1))
+word128FromArray32LE a = word128BE (retract splitWord64LE (indexArray a 2, indexArray a 3)) (retract splitWord64LE (indexArray a 0, indexArray a 1))
 
 word128FromArray64LE :: PrimArray f Word64 -> Word128
 word128FromArray64LE a = word128BE (indexArray a 1) (indexArray a 0)

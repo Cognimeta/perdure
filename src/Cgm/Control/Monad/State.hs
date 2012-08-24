@@ -106,6 +106,6 @@ mapStateT :: (m (a, Maybe s) -> n (b, Maybe s)) -> StateT s m a -> StateT s n b
 mapStateT f m = StateT $ f . runStateT m
 
 pairStateT :: Functor m => StateT s (StateT t m) a -> StateT (s, t) m a
-pairStateT (StateT sf) = StateT $ \(s, t) -> (fmap $ \((a, ms), mt) -> (a, combineMaybes s t ms mt)) $ runStateT (sf s) t where
-  combineMaybes s t ms mt = maybe (fmap (, t) ms) (Just . (fromMaybe s ms,)) mt
+pairStateT (StateT sf) = StateT $ \(s, t) -> fmap (\((a, ms), mt) -> (a, combineMaybes s t ms mt)) $ runStateT (sf s) t where
+  combineMaybes s t ms = maybe (fmap (, t) ms) (Just . (fromMaybe s ms,))
 

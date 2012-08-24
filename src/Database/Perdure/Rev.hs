@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, TypeFamilies, RankNTypes, EmptyDataDecls, DeriveDataTypeable, TypeOperators, FlexibleContexts, UndecidableInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, RankNTypes, EmptyDataDecls, DeriveDataTypeable, TypeOperators, FlexibleContexts, UndecidableInstances, ScopedTypeVariables #-}
 
 module Database.Perdure.Rev(
   (:>)(..),
@@ -61,7 +61,7 @@ class Rev a => PersistentRev a where
   serRev :: (forall b. Integer -> Persister b -> (b -> a) -> b -> z) -> a -> z
 instance PersistentRev NoRev where  
   deserRev _ _ = error "bad index when deserializing Rev"
-  serRev f a = onNoRev a
+  serRev f = onNoRev
 instance (Persistent b, PersistentRev r) => PersistentRev (b :> r) where
   deserRev f i = if i == (at :: At (b :> r)) lastRev then f persister Current else deserRev ((. (Previous .)) . f) i
   serRev f = onRev (f ((at :: At (b :> r)) lastRev) persister Current) (serRev $ ((. (Previous .)) .) . f)

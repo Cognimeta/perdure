@@ -90,7 +90,7 @@ listStructure :: List a => Bijection' a (Maybe (Listed a, a))
 listStructure = uncheckedBijection (onList Nothing $ Just ./ (,)) (maybe emptyList $ uncurry consList)
 
 maybeMaximumBy :: Foldable l a => (a -> a -> Ordering) -> l -> Maybe a
-maybeMaximumBy o l = Foldable.foldr (\a -> Just . maybe a (maxBy o a)) Nothing l
+maybeMaximumBy o = Foldable.foldr (\a -> Just . maybe a (maxBy o a)) Nothing
   
 maxBy :: (a -> a -> Ordering) -> a -> a -> a
 maxBy o a b = case o a b of {GT -> a; _ -> b}

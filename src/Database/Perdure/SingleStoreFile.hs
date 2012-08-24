@@ -26,5 +26,5 @@ newtype SingleStoreFile a = SingleStoreFile a deriving SyncableStoreFile
 instance RawStoreFile a => StoreFile (SingleStoreFile a) where
   type StoreRef (SingleStoreFile a) = BasicRef
   storeFileWrite (SingleStoreFile f) addr e bufs = storeFileWrite1 f addr e bufs >> return (BasicRef addr $ narrowBufsLen bufs)
-  storeFileRead (SingleStoreFile f) (BasicRef addr size) e v k = storeFileRead1 f addr size e v k
+  storeFileRead (SingleStoreFile f) (BasicRef addr size) = storeFileRead1 f addr size
   

@@ -36,7 +36,7 @@ deriving instance Show a => Show (SizeRef n a)
 instance Persistent1 (SizeRef n) where persister1 = structureMap $ persister |. persister1
 instance Nat n => RefPersistent (SizeRef n) where
   refPersister = RefView (either (TooSmallForRef . deref) LargeEnoughForRef . getSum) $ 
-                 (SizeRefPersister (refineLen l)) where
+                 SizeRefPersister $ refineLen l where
     l :: Len Word8 Word
     l = unsafeLen $ 1 `shiftL` (at :: At n) intOfNat
   -- The use of the SizeRef constructor above instead of struct is required because the Structure typeclass seems

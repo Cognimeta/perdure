@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TypeFamilies, TypeOperators, Rank2Types, FlexibleContexts, ScopedTypeVariables, BangPatterns, GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TypeOperators, Rank2Types, FlexibleContexts, ScopedTypeVariables, BangPatterns, GADTs #-}
 
 module Database.Perdure.Decrementer (
   decr
@@ -47,7 +47,7 @@ decr !p !a !s = case p of
   ViewPersister i pb -> decr pb (apply i a) s
   SummationPersister pi _ f -> f (\i pb _ b -> decr pb b $ decr pi i s) a
   DRefPersister' -> case a of (DRef _ (DeserializerContext _ cache) warr) -> 
-                                let referenced = decr persister $ let da = deref a in da `seq` (unsafeClearCache cache $ arrayRefAddr warr) `seq` da
+                                let referenced = decr persister $ let da = deref a in da `seq` unsafeClearCache cache (arrayRefAddr warr) `seq` da
                                 in either (\(WordNArrayRef _ r _) -> decrRef r referenced) (\(WordNArrayRef _ r _) -> decrRef r referenced) (unwrap warr) s
   CRefPersister' _ pra -> onCRef (decr pra) (decr persister) a s
 

@@ -39,7 +39,7 @@ instance Ord a => Monoid (MapMultiset a) where
   mappend (MapMultiset a) (MapMultiset b) = MapMultiset $ Map.unionWith (+) a b
   
 instance (Ord a, Persistent a) => Persistent (MapMultiset a) where
-  persister = structureMap $ persister `iacomap` (uncheckedInjection Map.toList Map.fromList)
+  persister = structureMap $ persister `iacomap` uncheckedInjection Map.toList Map.fromList
 
 deriveStructured ''MapMultiset
   

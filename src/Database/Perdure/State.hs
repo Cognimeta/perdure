@@ -41,7 +41,6 @@ module Database.Perdure.State(
 
 import Prelude()
 import Cgm.Prelude
-import Debug.Trace
 import Control.Concurrent
 import qualified Cgm.Control.Monad.State as M
 import Control.Monad.State hiding (sequence)
@@ -172,7 +171,7 @@ asyncWriteState1 a rs =
 writeRootSimple :: forall s c a. (Persistent s, Multiset c, Persistent (c Address), Persistent a, Space s, Typeable a, Typeable s, Typeable1 c) => 
                    StateLocation -> s -> Root (RootValues c s a) c s a -> IO () -> IO (RootState Identity c s a)
 writeRootSimple l@(StateLocation f cache _) s r done = 
-  fmap (\(r', (_ :: c Address), s') -> RootState l s' $ Identity r') $ -- We may want to rewrite 'write' so it does not produce counts, and drop the Multiset c context
+  fmap (\(r', _ :: c Address, s') -> RootState l s' $ Identity r') $ -- We may want to rewrite 'write' so it does not produce counts, and drop the Multiset c context
   writeRoot (rootId r) l done $ write f cache s r
 
 -- | Takes the current state and the new value to be written, and writes and returns a new state. Writing is strict so make sure you do
@@ -265,12 +264,12 @@ write f c ls a' = {-# SCC "serialize" #-} StateT $ \s -> do
 readRoot :: forall a c s d f. (Persistent a, Persistent (c Address), Persistent s, Space s, Typeable1 c, Typeable a, Typeable s) => 
             WriteStoreFile -> MVar Cache -> RootAddress -> IO (Maybe (Root (RootValues c s a) c s a))
 readRoot f c rootAddr =
-  (fmap $ deserializeFromFullArray $ apply cDeser persister $ DeserializerContext f c) <$> 
+  fmap (deserializeFromFullArray $ apply cDeser persister $ DeserializerContext f c) <$> 
   foldM (\result next -> maybe next (return . Just) result) Nothing readRootDataWE where
     readRootData :: forall w. ValidationDigestWord w => Endianness -> Tagged w (IO (Maybe (ArrayRange (PrimArray Free Word))))
     readRootData e = tag $ fmap (fmap deserInput) $ await1 $ 
                      storeFileRead f (rootRef rootAddr) e (RootValidator :: RootValidator w)
-    readRootDataW e = onWordConv id reverse $ [(at :: At Word32) $ readRootData e, (at :: At Word64) $ readRootData e]
+    readRootDataW e = onWordConv id reverse [(at :: At Word32) $ readRootData e, (at :: At Word64) $ readRootData e]
     readRootDataWE = concat $ transpose $ readRootDataW <$> [platformWordEndianness, reverseEndianness platformWordEndianness]
 
 ---------------
@@ -294,8 +293,8 @@ instance Space a => Allocator (StateAllocator a) where
     let a' = removeSpan span a
     --putStrLn $ "Alloc " ++ show size ++ "@" ++ show (onSortedPair const span) ++ "  => free: " ++ (show a') --findSpan 0 a'
     return (a', onSortedPair (\start end -> unsafeLen start) span) where
-      requireSpan = (onSortedPair $ \start _ -> unsafeSortedPair start (start + getLen len)) . 
-                    ((maybe (error "Out of storage space") id) . listHead) . 
+      requireSpan = onSortedPair (\start _ -> unsafeSortedPair start (start + getLen len)) . 
+                    fromMaybe (error "Out of storage space") . listHead . 
                     findSpan (getLen len)
 
 deriveStructured ''Root

@@ -24,6 +24,6 @@ module Cgm.Data.NEList (
 data NEList a = Single a | NECons a (NEList a) deriving Show
 neSingleton = Single
 neCons = NECons
-onNEList :: (a -> (Maybe (NEList a)) -> z) -> NEList a -> z
+onNEList :: (a -> Maybe (NEList a) -> z) -> NEList a -> z
 onNEList f l = case l of {Single a -> f a Nothing; NECons a r -> f a (Just r)}
-neAppend l1 l2 = onNEList (\a1 r1 -> neCons a1 $ maybe id (neAppend) r1 l2) l1
+neAppend l1 l2 = onNEList (\a1 r1 -> neCons a1 $ maybe id neAppend r1 l2) l1

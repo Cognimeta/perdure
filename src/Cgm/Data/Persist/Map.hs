@@ -138,7 +138,7 @@ instance Tr Leaf where
   trans k f a@(Upper k0 (Leaf v0)) = 
     if k == k0
     then first (maybe Leave $ Change . maybe (Merge Empt) (Single . Upper k0 . Leaf)) $ swap $ runState f (Just v0)
-    else first (maybe Leave $ maybe Leave $ \v -> Change $ ((if (k > k0) then id else flip) Split) a (Upper k $ Leaf v)) $ swap $ runState f Nothing
+    else first (maybe Leave $ maybe Leave $ \v -> Change $ (if k > k0 then id else flip) Split a (Upper k $ Leaf v)) $ swap $ runState f Nothing
   mergeLeft Empt = Left
   mergeRight ua Empt = Left ua
   foldlK f z (Upper k (Leaf a)) = f z k a
@@ -188,10 +188,10 @@ instance Tr t => Tr (Node t) where
                                           ) $ trans k f c2)
   mergeLeft c = onNode
                 (\c0 c1 -> Left $ node3 c c0 c1) 
-                (\c0 c1 c2 -> Right $ (node2 c c0, node2 c1 c2))
+                (\c0 c1 c2 -> Right (node2 c c0, node2 c1 c2))
   mergeRight n c = ($ n) $ onNode
                 (\c0 c1 -> Left $ node3 c0 c1 c) 
-                (\c0 c1 c2 -> Right $ (node2 c0 c1, node2 c2 c))
+                (\c0 c1 c2 -> Right (node2 c0 c1, node2 c2 c))
   foldlK f z  = onNode (\n0 n1 -> foldlK f (foldlK f z n0) n1) (\n0 n1 n2-> foldlK f (foldlK f (foldlK f z n0) n1) n2)
   foldrK f z  = onNode (\n0 n1 -> foldrK f (foldrK f z n1) n0) (\n0 n1 n2-> foldrK f (foldrK f (foldrK f z n2) n1) n0)
 

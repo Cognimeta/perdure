@@ -30,7 +30,7 @@ import Data.Typeable
 
 newtype SpaceTree = SpaceTree (Map Word64 Bool) deriving Typeable
 instance Space SpaceTree where
-  emptySpace = SpaceTree $ Cgm.Data.Persist.Map.empty
+  emptySpace = SpaceTree Cgm.Data.Persist.Map.empty
   removeSpan = onSortedPair (\b e -> spaceTreeIncr e . spaceTreeDecr b)
   addSpan = onSortedPair (\b e -> spaceTreeIncr b . spaceTreeDecr e)
   findSpan sz (SpaceTree m) = filter (onSortedPair $ \start end -> end - start > sz) $

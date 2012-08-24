@@ -23,7 +23,7 @@ module Database.Perdure.StoreFile (
     BasicRef(..),
     module Foreign.Ptr,
     module Cgm.Data.Len,
-    module Database.Perdure.Validator
+    module Validator
 ) where
 
 import Prelude ()
@@ -34,7 +34,7 @@ import Foreign.Ptr
 import Cgm.Data.Len
 import Cgm.Data.Super
 import Cgm.Control.Concurrent.Await
-import Database.Perdure.Validator
+import Database.Perdure.Validator as Validator
 import Cgm.System.Endian
 import Cgm.Data.Structured
 import Database.Perdure.Space.Space
