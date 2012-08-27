@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, FlexibleContexts, UndecidableInstances, TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, FlexibleContexts, UndecidableInstances, TypeFamilies, DeriveDataTypeable #-}
 
 module Database.Perdure.SpaceBook(
   SpaceBook(..)
@@ -23,7 +23,9 @@ import Cgm.Data.Structured
 import Control.Monad.State
 import Database.Perdure.Persistent
 import Database.Perdure.Space
+import Database.Perdure.SpaceTree
 import Database.Perdure.Count
+import Database.Perdure.Data.MapMultiset
 import Database.Perdure.CSerializer(Address)
 import Cgm.Data.Monoid
 import Database.Perdure.ReplicatedFile
@@ -32,17 +34,11 @@ import Cgm.Data.Super
 import Database.Perdure.Package
 import Cgm.Data.Typeable
 
-moduleName :: String
-moduleName = "Database.Perdure.SpaceBook"
+data SpaceBook = SpaceBook {
+  bookCount :: !(MapMultiset Address), 
+  bookSpace :: !SpaceTree
+  } deriving Typeable
 
-data SpaceBook c s = SpaceBook {
-  bookCount :: !(c Address), 
-  bookSpace :: !s
-  }
-
-instance (Persistent (c Address), Persistent s) => Persistent (SpaceBook c s) where persister = structureMap persister
+instance Persistent SpaceBook where persister = structureMap persister
                                         
-instance Typeable1 c => Typeable1 (SpaceBook c) where 
-  typeOf1 _ = mkTyCon3 perdurePackage moduleName "SpaceBook" `mkTyConApp` [typeOf1 (undefined :: c ())]
-
 deriveStructured ''SpaceBook

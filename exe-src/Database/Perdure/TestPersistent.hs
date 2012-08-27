@@ -77,14 +77,13 @@ instance (Persistent a, Typeable a, Arbitrary a) => Arbitrary (TestTree a) where
 -- | We establish a default persister for TestTree, which will simply persist it according to the internal structure.
 instance (Persistent a, Typeable a) => Persistent (TestTree a) where persister = structureMap persister
 
-writeReadTestFile :: forall a. (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
+writeReadTestFile :: (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
 writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
   putCpuTime "Data creation" $ evaluate $ prnf persister a
   i <- testInitState f
   final <- writeState a i >>= writeState a
   readCache <- newMVar (emptyCache 1000)
-  readState :: RootState Identity [] SpaceTree a <- maybe (error "No valid roots") id <$>
-                                                    readState (StateLocation f readCache testRootAddresses)
+  readState <- fromMaybe (error "No valid roots") <$> readState (StateLocation f readCache testRootAddresses)
   putCpuTime "Read time" $ evaluate $ a == (runIdentity $ stateValue readState)
 
 

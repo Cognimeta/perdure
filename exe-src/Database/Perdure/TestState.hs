@@ -85,7 +85,7 @@ testRootAddresses :: [RootAddress]
 testRootAddresses = [RootAddress 0, RootAddress $ apply super rootAllocSize]
 
 -- | Create an initial state where the is 800MB free space (beyond the two consecutive roots specified in testRootAddresses)
-testInitState :: WriteStoreFile -> IO (RootState No MapMultiset SpaceTree a)
+testInitState :: WriteStoreFile -> IO (RootState No a)
 testInitState f = flip fmap (newMVar $ emptyCache 1000) $ \c -> 
   initState (StateLocation f c testRootAddresses) $
   addSpan (sortedPair (2 * apply super (getLen rootAllocSize)) $ 100 * 1000000) emptySpace

@@ -36,7 +36,7 @@ import Database.Perdure.Ref
 -- on values which have already been written, but we use older values of s and c for which the value to increment
 -- was not yet allocated. So most often it is s, and not in c.
 
-incr :: (Multiset c, Space s) => Persister a -> a -> SpaceBook c s -> SpaceBook c s
+incr :: Persister a -> a -> SpaceBook -> SpaceBook
 incr !p !a !s = case p of
   PartialWordPersister n -> s
   PairPersister pb pc -> case a of (b, c) -> incr pc c $ incr pb b s
@@ -48,40 +48,9 @@ incr !p !a !s = case p of
                                 in either (\(WordNArrayRef _ r _) -> incrRef r referenced) (\(WordNArrayRef _ r _) -> incrRef r referenced) (unwrap warr) s
   CRefPersister' _ pra -> onCRef (incr pra) (incr persister) a s
 
-incrRef :: forall w s c. (LgMultiple Word64 w, Space s, Multiset c) =>
-           BasicRef w -> (SpaceBook c s -> SpaceBook c s) -> SpaceBook c s -> SpaceBook c s
+incrRef :: forall w. LgMultiple Word64 w =>
+           BasicRef w -> (SpaceBook -> SpaceBook) -> SpaceBook -> SpaceBook
 incrRef r children cs@(SpaceBook c s) =  let rs = refStart r in
   if isFreeSpace (getLen rs) s 
   then (\(SpaceBook c' s') -> SpaceBook c' $ removeSpan (refSpan r) s') $ children cs 
   else SpaceBook (MS.insert rs c) s
-
-{-
-newtype Incrementer c s a = Incrementer {getIncrementer :: (SpaceBook c s -> SpaceBook c s) :<- a} deriving Cofunctor
-incr :: Bijection' (Incrementer c s a) (a -> SpaceBook c s -> SpaceBook c s)
-incr = uncheckedBijection getRevFun RevFun . struct
-
--- apIncr and unIncr are workarounds for GHC 7.0.2 issue <http://hackage.haskell.org/trac/ghc/ticket/5002>
-apIncr :: Incrementer c s a -> a -> SpaceBook c s -> SpaceBook c s
-apIncr = apply incr
-unIncr :: (a -> SpaceBook c s -> SpaceBook c s) -> Incrementer c s a
-unIncr = retract incr
-
-instance InjectionACofunctor (Incrementer c s) where iacomap = cofunctorIacomap
-instance Multiset c => FixedPersister (Incrementer c s) where
-  partialWordPersister n = retract incr $ const id
-  (&.) = wrapB incr incr incr $ \ad bd (a, b) -> bd b . ad a
-instance Multiset c => BoundedPersister (Incrementer c s) where
-  (|.) = wrapB incr incr incr either
-instance Multiset c => SeqPersister (Incrementer c s) where
-  fromSeqPersister p = retract incr $ const id -- There are no references in seqPersisters
-  summationPersister pi _ s = unIncr $ s (\i pb _ b -> apIncr pb b . apIncr pi i)
-instance (Space s, Multiset c) => RPersister (Incrementer c s) where
-  storeRefPersister = unIncr $ \r -> incrRef r id
-  dRefPersister' p = unIncr $ \a@(DRef _ warr) -> 
-    let referenced = apIncr p (deref a)
-    in either (\(WordNArrayRef _ r _) -> incrRef r referenced) (\(WordNArrayRef _ r _) -> incrRef r referenced) $ unwrap warr
-instance (Space s, Multiset c) => Persister (Incrementer c s) where
-  cRefPersister' = (persister1 |. persister) >$< onCRef Left Right
-
-deriveStructured ''Incrementer
--}
