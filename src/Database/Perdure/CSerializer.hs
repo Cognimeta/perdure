@@ -38,7 +38,7 @@ import Cgm.Data.Len
 import Cgm.Control.Concurrent.NotificationCount
 import Cgm.Control.Combinators
 import Database.Perdure.CDeserializer
-import Database.Perdure.Count.Count
+import Database.Perdure.Count
 import Cgm.Data.Multiset as MS
 import Data.IORef
 import System.IO.Unsafe

@@ -27,7 +27,7 @@ import Crypto.Hash.Tiger
 import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
 import System.IO.Unsafe
-import Cgm.Data.Digest
+import Database.Perdure.Digest
 import Cgm.Data.Maybe
 import Cgm.Data.Len
 import Database.Perdure.Validator

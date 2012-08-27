@@ -80,7 +80,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Time.Calendar
 import Data.Time.Clock
-import Cgm.Data.Digest
+import Database.Perdure.Digest
 import Database.Perdure.Validator
 import Database.Perdure.WValidator
 import Database.Perdure.StoreFile

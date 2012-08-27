@@ -29,7 +29,7 @@ module Database.Perdure.State(
   collectState,
   collectStateM,
   emptyCache,
-  module Database.Perdure.Space.Space,
+  module Database.Perdure.Space,
   module Database.Perdure.Persistent,
   No,
   no,
@@ -61,8 +61,8 @@ import Database.Perdure.Decrementer
 import Database.Perdure.Incrementer
 import Database.Perdure.RootValidator
 import Database.Perdure.SizeRef
-import Database.Perdure.Space.Space
-import Database.Perdure.Count.Count
+import Database.Perdure.Space
+import Database.Perdure.Count
 import Cgm.System.Endian
 import Cgm.Control.Combinators
 import Cgm.Control.Concurrent.MVar
@@ -100,7 +100,7 @@ data RootState m c s a = RootState {
   stateLocation :: StateLocation,
   stateSpace :: s, -- ^ stateSpace is always a subset of (or the same as) the true free space as determined by scanning rootScan from rootScan's s and c
                             -- This subset is maintained conservatively to speed up new allocations.
-  stateRoot :: m (Root (RootValues c s a) c s a) -- ^ The persisted data consisting of bookkeeping data and user data.
+  stateRoot :: m (Root c s a) -- ^ The persisted data consisting of bookkeeping data and user data.
   }
 
 
@@ -111,14 +111,14 @@ stateValue = fmap (deref . rootValue . rootScan) . stateRoot
 -- not use a CDRef of a but a SizeRef that would allow us to write more data in the root (keeping in mind though that we need room
 -- for 2 such references, after we have deducted the space for the id and the other two DRefs).
 -- | Root persisted data. The 'a' type parameter is the user persisted data type.
-data Root d c s a = Root {
+data Root c s a = Root {
   rootId :: StateId, 
-  rootDecr :: Maybe d,
+  rootDecr :: Maybe (RootValues c s a),
   rootScan :: RootValues c s a
   }
 
-instance (Persistent a, Persistent s, Persistent (c Address), Persistent d, Typeable1 c, Typeable a, Typeable s) => 
-         Persistent (Root d c s a) where persister = structureMap persister
+instance (Persistent a, Persistent s, Persistent (c Address), Typeable1 c, Typeable a, Typeable s) => 
+         Persistent (Root c s a) where persister = structureMap persister
 
 data RootValues c s a = RootValues {
   rootCS :: CDRef (SpaceBook c s), 
@@ -169,7 +169,7 @@ asyncWriteState1 a rs =
   \(RootState l s (Identity (Root i d (RootValues rcs _)))) -> writeRootSimple l s $ Root (succ i) d $ RootValues rcs $ ref a
 
 writeRootSimple :: forall s c a. (Persistent s, Multiset c, Persistent (c Address), Persistent a, Space s, Typeable a, Typeable s, Typeable1 c) => 
-                   StateLocation -> s -> Root (RootValues c s a) c s a -> IO () -> IO (RootState Identity c s a)
+                   StateLocation -> s -> Root c s a -> IO () -> IO (RootState Identity c s a)
 writeRootSimple l@(StateLocation f cache _) s r done = 
   fmap (\(r', _ :: c Address, s') -> RootState l s' $ Identity r') $ -- We may want to rewrite 'write' so it does not produce counts, and drop the Multiset c context
   writeRoot (rootId r) l done $ write f cache s r
@@ -262,7 +262,7 @@ write f c ls a' = {-# SCC "serialize" #-} StateT $ \s -> do
   cSer persister (c, StateAllocator f lv, Just cd) (\a'' s' -> readMVar lv >>= \ls' -> readMVar cd >>= \u -> return ((a'', u, ls'), s')) a' s
 
 readRoot :: forall a c s d f. (Persistent a, Persistent (c Address), Persistent s, Space s, Typeable1 c, Typeable a, Typeable s) => 
-            WriteStoreFile -> MVar Cache -> RootAddress -> IO (Maybe (Root (RootValues c s a) c s a))
+            WriteStoreFile -> MVar Cache -> RootAddress -> IO (Maybe (Root c s a))
 readRoot f c rootAddr =
   fmap (deserializeFromFullArray $ apply cDeser persister $ DeserializerContext f c) <$> 
   foldM (\result next -> maybe next (return . Just) result) Nothing readRootDataWE where

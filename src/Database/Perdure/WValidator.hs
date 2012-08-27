@@ -24,7 +24,7 @@ import Cgm.Prelude
 import Data.Word
 import Cgm.Data.Word
 import Cgm.Data.Len
-import Cgm.Data.Digest
+import Database.Perdure.Digest
 import Database.Perdure.Validator
 import Cgm.System.Endian
 import Cgm.Data.Maybe

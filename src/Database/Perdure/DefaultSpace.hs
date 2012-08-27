@@ -24,7 +24,7 @@ import Database.Perdure.Rev
 import Data.Lens
 import Data.Lens.Template
 import Database.Perdure.Space
-import Database.Perdure.Space.SpaceTree
+import Database.Perdure.SpaceTree
 import Data.Typeable
 
 newtype DefaultSpace = DefaultSpace {_defaultSpace :: SpaceTree <: NoRev} deriving Typeable

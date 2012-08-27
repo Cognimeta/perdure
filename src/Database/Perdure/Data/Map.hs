@@ -13,7 +13,7 @@ or implied. See the License for the specific language governing permissions and 
 
 {-# LANGUAGE DeriveFunctor, ScopedTypeVariables, TemplateHaskell, DeriveDataTypeable, KindSignatures, TypeFamilies, FlexibleContexts #-}
 
-module Cgm.Data.Persist.Map(
+module Database.Perdure.Data.Map(
   Map,
   updateM,
   empty,
@@ -30,7 +30,7 @@ module Cgm.Data.Persist.Map(
   elems,
   maxKey,
   scan,
-  Cgm.Data.Persist.Map.mapLens
+  Database.Perdure.Data.Map.mapLens
   ) where
 
 import Prelude hiding (null, lookup)
@@ -54,7 +54,7 @@ import Cgm.Data.Typeable
 type R = CRef (SizeRef D9)
 
 moduleName :: String
-moduleName = "Cgm.Data.Persist.Map"
+moduleName = "Database.Perdure.Data.Map"
 
 -- | Unlike Data.Map, this Map does not support constant time size computation
 data Map k a = Empty | NonEmpty !(Tree Leaf k a) deriving (Functor, Typeable)

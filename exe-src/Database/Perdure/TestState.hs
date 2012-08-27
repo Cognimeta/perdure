@@ -36,15 +36,15 @@ import Database.Perdure.SizeRef
 import Database.Perdure.RNF
 import Database.Perdure.ReplicatedFile
 import Cgm.Control.Combinators
-import Database.Perdure.Count.Count(Address)
+import Database.Perdure.Count(Address)
 import Cgm.System.Endian
 import Debug.Trace
-import Profile
+import Cgm.Control.Profile
 import qualified Control.Monad.State.Strict as Std
 import Cgm.Control.Monad.State
 import Cgm.Data.Either
 import Control.Monad.Error
-import qualified Cgm.Data.Persist.Map as PMap
+import qualified Database.Perdure.Data.Map as PMap
 import Database.Perdure.Ref
 import Cgm.Data.Super
 import Database.Perdure.RNF
@@ -53,8 +53,8 @@ import Database.Perdure.CDeserializer
 import Database.Perdure.RNF
 import Cgm.Data.Nat
 import Cgm.Data.WordN
-import Cgm.Data.Persist.MapMultiset
-import Database.Perdure.Space.SpaceTree
+import Database.Perdure.Data.MapMultiset
+import Database.Perdure.SpaceTree
 import Control.Monad.Random
 import Control.Concurrent.MVar
 import Cgm.Data.Typeable

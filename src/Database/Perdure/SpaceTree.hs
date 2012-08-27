@@ -13,7 +13,7 @@ or implied. See the License for the specific language governing permissions and 
 
 {-# LANGUAGE TypeFamilies, TemplateHaskell, DeriveDataTypeable #-}
 
-module Database.Perdure.Space.SpaceTree(
+module Database.Perdure.SpaceTree(
   SpaceTree
   ) where
 
@@ -22,15 +22,15 @@ import Cgm.Prelude
 import Data.Word
 import Cgm.Data.Maybe
 import Cgm.Control.Monad.State
-import Database.Perdure.Space.Space
-import Cgm.Data.Persist.Map
+import Database.Perdure.Space
+import Database.Perdure.Data.Map
 import Database.Perdure.Persistent
 import Debug.Trace
 import Data.Typeable
 
 newtype SpaceTree = SpaceTree (Map Word64 Bool) deriving Typeable
 instance Space SpaceTree where
-  emptySpace = SpaceTree Cgm.Data.Persist.Map.empty
+  emptySpace = SpaceTree Database.Perdure.Data.Map.empty
   removeSpan = onSortedPair (\b e -> spaceTreeIncr e . spaceTreeDecr b)
   addSpan = onSortedPair (\b e -> spaceTreeIncr b . spaceTreeDecr e)
   findSpan sz (SpaceTree m) = filter (onSortedPair $ \start end -> end - start > sz) $

@@ -11,12 +11,12 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-module Cgm.Data.TestMap(
+module Database.Perdure.TestMap(
   testMap
   ) where
 
 import Prelude hiding (null, lookup)
-import Cgm.Data.Persist.Map
+import Database.Perdure.Data.Map
 import Test.QuickCheck
 import Data.List(foldl')
 

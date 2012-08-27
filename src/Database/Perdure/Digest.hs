@@ -13,7 +13,7 @@ or implied. See the License for the specific language governing permissions and 
 
 {-# LANGUAGE TypeFamilies, FlexibleInstances, GeneralizedNewtypeDeriving, FlexibleContexts, ScopedTypeVariables, TupleSections, TemplateHaskell #-}
 
-module Cgm.Data.Digest (
+module Database.Perdure.Digest (
   Digest(..),
   Skein512Digest,
   MD5Digest,

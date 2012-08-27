@@ -11,18 +11,26 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
-
-module Cgm.Data.LongWord (
-  Word128,
-  word128BE
+module Database.Perdure.Space (
+  Space(..),
+  Span,
+  module Cgm.Data.SortedPair,
+  module Data.Monoid
   ) where
 
-import Cgm.Data.Word
-import Cgm.Data.Structured
-       
-data Word128 = Word128 {word128_64 :: {-# UNPACK #-} !Word64, word128_0 :: {-# UNPACK #-} !Word64} deriving (Eq, Ord, Show)
+import Prelude()
+import Cgm.Prelude
+import Data.Monoid
+import Data.Word
+import Cgm.Data.SortedPair
 
-word128BE = Word128
+type Span = SortedPair Word64
 
-deriveStructured ''Word128
+-- Users must ensure they do not add overlapping spans, or remove spans unless all of its contents has already been added (perhaps as seperate spans)
+class Space a where
+  emptySpace :: a
+  removeSpan :: Span -> a -> a
+  addSpan :: Span -> a -> a
+  findSpan :: Word64 -> a -> [Span]
+  isFreeSpace :: Word64 -> a -> Bool
+

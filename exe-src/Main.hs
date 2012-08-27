@@ -15,7 +15,6 @@ or implied. See the License for the specific language governing permissions and 
 
 module Main (
   main
-
 ) where
 
 import Data.Int
@@ -28,12 +27,11 @@ import System.Environment
 import Language.Haskell.TH
 import Database.Perdure.TestState
 import Database.Perdure.TestPersistent
-import Database.Perdure.TestSeqPersistent
 import Database.Perdure.TestStoreFile
+import Database.Perdure.TestMap
 import Cgm.TH.Label
-import Cgm.Data.TestMap
 
-import Profile
+import Cgm.Control.Profile
 
 main :: IO ()
 main = getArgs >>= argsMain
@@ -53,7 +51,7 @@ mains = [
     $(label 'testPersistentMap),
   $(label 'testSeqPersistent),
     $(label 'testStates),
-    $(label 'testStatesDag),
-  -- $(label 'testStatesDestroysRaw1),
+  $(label 'testStatesDag),
     $(label 'testMap)
+  -- $(label 'testStatesDestroysRaw1),
   ]

@@ -13,7 +13,7 @@ or implied. See the License for the specific language governing permissions and 
 
 {-# LANGUAGE TypeFamilies, TemplateHaskell, DeriveDataTypeable #-}
 
-module Cgm.Data.Persist.MapMultiset(
+module Database.Perdure.Data.MapMultiset(
   MapMultiset(mapMultisetMap),
   module Cgm.Data.Multiset
   ) where
@@ -24,8 +24,8 @@ import Cgm.Data.Maybe
 import Cgm.Data.Multiset
 import Database.Perdure.Persistent
 import Cgm.Control.Monad.State
-import Cgm.Data.Persist.Map(Map)
-import qualified Cgm.Data.Persist.Map as Map
+import Database.Perdure.Data.Map(Map)
+import qualified Database.Perdure.Data.Map as Map
 import Data.Dynamic
 import Cgm.Data.Typeable
 import Database.Perdure.Package

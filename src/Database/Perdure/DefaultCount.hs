@@ -24,7 +24,7 @@ import Database.Perdure.Rev
 import Data.Lens
 import Data.Lens.Template
 import Cgm.Data.Multiset
-import Cgm.Data.Persist.MapMultiset
+import Database.Perdure.Data.MapMultiset
 import Data.Typeable
 
 newtype DefaultCount a = DefaultCount {_defaultCount :: MapMultiset a <: NoRev} deriving Typeable

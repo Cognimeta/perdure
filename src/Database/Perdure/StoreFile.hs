@@ -37,7 +37,7 @@ import Cgm.Control.Concurrent.Await
 import Database.Perdure.Validator as Validator
 import Cgm.System.Endian
 import Cgm.Data.Structured
-import Database.Perdure.Space.Space
+import Database.Perdure.Space
 
 class SyncableStoreFile f => StoreFile f where
   type StoreRef f :: * -> *

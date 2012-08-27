@@ -11,14 +11,13 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
-
-module Cgm.Data.Functor.Sum (
-  Sum(..)
+module Database.Perdure.Count (
+  Address
   ) where
 
-import Cgm.Data.Structured
+import Prelude()
+import Cgm.Prelude
+import Data.Word
+import Cgm.Data.Len
 
-newtype Sum a b e = Sum {getSum :: Either (a e) (b e)}
-
-deriveStructured ''Sum
+type Address = Len Word64 Word64

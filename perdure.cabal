@@ -1,4 +1,4 @@
-name: perdure
+Name: perdure
 version: 0.1.0
 cabal-version: >= 1.8
 build-type: Simple
@@ -144,24 +144,46 @@ library
     cpp-options: -DWORDSIZE=64
   extensions: CPP
   exposed-modules:
-    Database.Perdure.State Database.Perdure.Persistent Database.Perdure.RNF Cgm.System.Endian Cgm.Data.Len Cgm.Data.Word Database.Perdure.LocalStoreFile Cgm.System.Mem.Alloc Cgm.Data.WordN Cgm.Data.Digest Cgm.Data.Super Database.Perdure.WValidator Database.Perdure.AllocCopy Database.Perdure.WriteBits Cgm.Prelude Cgm.Control.Combinators
-    Cgm.Control.Concurrent.Await Cgm.Control.Concurrent.MVar
-    Cgm.Control.Concurrent.NotificationCount Cgm.Control.Concurrent.TThread Cgm.Control.InFunctor Cgm.Data.Array
-    Cgm.Data.Division Cgm.Data.Either Cgm.Data.Functor.Sum Cgm.Data.List Cgm.Data.LongWord
-    Cgm.Data.Maybe Cgm.Data.Multiset Cgm.Data.NEList Cgm.Data.Nat Cgm.Data.Nat.Base
-    Cgm.Data.Nat.Constants Cgm.Data.SortedPair Cgm.Data.Structured Cgm.Data.Structured.Derive
-    Cgm.Data.Tagged Database.Perdure.Allocator Database.Perdure.ArrayRef Database.Perdure.CDeserializer
-    Database.Perdure.CRef Database.Perdure.CSerializer Database.Perdure.Count.Count Database.Perdure.DRef Database.Perdure.Decrementer Database.Perdure.Incrementer
-    Database.Perdure.Deref Database.Perdure.RootValidator Database.Perdure.SizeRef
-    Database.Perdure.Space.Space Database.Perdure.Space.SpaceTree Database.Perdure.StoreFile Database.Perdure.Validator
-    Database.Perdure.WordArrayRef Database.Perdure.WordNArrayRef Database.Perdure.ReplicatedFile,
-    Cgm.Data.Functor Cgm.Data.Monoid Database.Perdure.SingleStoreFile Database.Perdure.History Database.Perdure.Rev Cgm.Control.Monad.State
-    Cgm.Data.MapMultiset Cgm.Data.Empty Cgm.Data.Persist.Map Cgm.Data.Persist.MapMultiset Database.Perdure.Ref Database.Perdure.SpaceBook
-    Cgm.Data.Typeable Cgm.Data.Bool Database.Perdure.Package
+    Database.Perdure.AllocCopy
+    Database.Perdure.Allocator
+    Database.Perdure.ArrayRef
+    Database.Perdure.CDeserializer
+    Database.Perdure.CRef
+    Database.Perdure.CSerializer
+    Database.Perdure.Count
+    Database.Perdure.DRef
+    Database.Perdure.Data.Map
+    Database.Perdure.Data.MapMultiset
+    Database.Perdure.Decrementer
+    Database.Perdure.Deref
+    Database.Perdure.History
+    Database.Perdure.Incrementer
+    Database.Perdure.LocalStoreFile
+    Database.Perdure.Package
+    Database.Perdure.Persistent
+    Database.Perdure.RNF
+    Database.Perdure.Ref
+    Database.Perdure.ReplicatedFile
+    Database.Perdure.Rev
+    Database.Perdure.RootValidator
+    Database.Perdure.SingleStoreFile
+    Database.Perdure.SizeRef
+    Database.Perdure.Space
+    Database.Perdure.SpaceBook
+    Database.Perdure.SpaceTree
+    Database.Perdure.State
+    Database.Perdure.StoreFile
+    Database.Perdure.Validator
+    Database.Perdure.WValidator
+    Database.Perdure.WordArrayRef
+    Database.Perdure.WordNArrayRef
+    Database.Perdure.WriteBits
   other-modules:        
+    Database.Perdure.Digest
   build-depends:
     base >= 4.5.0.0 && < 5,
     template-haskell >= 2.7.0.0,
+    cognimeta-utils == 0.1.0,
     QuickCheck >=2.4.0.1,
     strict >= 0.3.2,
     mtl >= 2.1.2,
@@ -201,6 +223,7 @@ executable perdure
   build-depends:
     base >= 4.5.0.0,
     template-haskell >= 2.7.0.0,
+    cognimeta-utils == 0.1.0,
     mtl >= 2.1.2,
     deepseq,
     QuickCheck >=2.4.0.1,

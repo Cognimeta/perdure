@@ -22,12 +22,11 @@ import Cgm.Prelude
 import Cgm.Data.Structured
 import Control.Monad.State
 import Database.Perdure.Persistent
-import Database.Perdure.Space.Space
-import Database.Perdure.Count.Count
+import Database.Perdure.Space
+import Database.Perdure.Count
 import Database.Perdure.CSerializer(Address)
 import Cgm.Data.Monoid
 import Database.Perdure.ReplicatedFile
-import Cgm.Data.Multiset as MS
 import Debug.Trace
 import Cgm.Data.Super
 import Database.Perdure.Package
