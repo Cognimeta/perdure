@@ -17,9 +17,8 @@ module Database.Perdure.TestState (
   testStates,
   testStatesDag,
   testStatesDestroysRaw1,
-  testInitState,
-  testRootAddresses,
-  SRef(..)
+  SRef(..),
+  mega
   ) where
 
 import Prelude()
@@ -43,7 +42,7 @@ import Cgm.Control.Profile
 import qualified Control.Monad.State.Strict as Std
 import Cgm.Control.Monad.State
 import Cgm.Data.Either
-import Control.Monad.Error
+import Control.Monad.Error hiding (sequence_)
 import qualified Database.Perdure.Data.Map as PMap
 import Database.Perdure.Ref
 import Cgm.Data.Super
@@ -58,6 +57,7 @@ import Database.Perdure.SpaceTree
 import Control.Monad.Random
 import Control.Concurrent.MVar
 import Cgm.Data.Typeable
+import Database.Perdure
 
 -- | A reference type which automatically puts its referent is a separately loadable allocation when its size is >= 2^12 bytes (4K)
 type SRef = CRef (SizeRef D12)
@@ -72,23 +72,12 @@ testStates _ =
   withReplicatedFiles "testStates" testStatesF
 
 testStatesF :: ReplicatedFile -> IO ()
-testStatesF f = do
-    i <- testInitState f
-    t0 <- writeState EmptyRList i
-    foldM (\s c -> putStrLn (show c) >> Std.execStateT (toStandardState $ updateState $ stepN c) s) t0 [0 .. 19]
-    return () where
-      stepN :: Word32 -> StateT (RList Word32) IO ()
-      stepN c = get >>= \l -> put $ foldr (\_ -> ConsRList c . ref) l $ counting 5000
-
--- | The root locations we will use here are two consecutive roots
-testRootAddresses :: [RootAddress]
-testRootAddresses = [RootAddress 0, RootAddress $ apply super rootAllocSize]
-
--- | Create an initial state where the is 800MB free space (beyond the two consecutive roots specified in testRootAddresses)
-testInitState :: WriteStoreFile -> IO (RootState No a)
-testInitState f = flip fmap (newMVar $ emptyCache 1000) $ \c -> 
-  initState (StateLocation f c testRootAddresses) $
-  addSpan (sortedPair (2 * apply super (getLen rootAllocSize)) $ 100 * 1000000) emptySpace
+testStatesF f =
+    newCachedFile 1000 f >>=
+    createPVar (EmptyRList :: RList Word32) (mega 100) . defaultRootLocation >>= \v ->
+    for_ [0 .. 19] $ \c -> do
+      print c
+      updatePVar v $ replicateM_ 5000 $ modify $ ConsRList (c :: Word32) . ref
 
 withReplicatedFiles :: String -> (ReplicatedFile -> IO a) -> ErrorT String IO a
 withReplicatedFiles n z = ErrorT $ fmap join $
@@ -129,13 +118,14 @@ testStatesDag  :: a -> IO ()
 testStatesDag _ =
   quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runErrorT $ (True <$) $
   withReplicatedFiles "testStatesDag" $ \f -> 
-  do
-    i <- testInitState f
-    t0 <- writeState (Dag $ ref []) i
-    foldM (\s c ->
-            putStrLn (show c) >>
-            Std.execStateT (toStandardState $ updateState $ StateT $ fmap (((),) . Just) . evalRandIO . dagBuild) s)
-      t0 $ [0 .. 1999]
+  newCachedFile 1000 f >>=
+  createPVar (Dag $ ref []) (mega 100) . defaultRootLocation >>= \v ->
+  for_ [0 .. 1999] $ \c -> do
+    print c
+    updatePVar v $ StateT $ fmap (((),) . Just) . evalRandIO . dagBuild
+
+mega :: Num a => a -> a
+mega = (1000000 *)
 
 deriveStructured ''RList
 deriveStructured ''Dag

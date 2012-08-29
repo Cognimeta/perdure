@@ -14,8 +14,8 @@ or implied. See the License for the specific language governing permissions and 
 {-# LANGUAGE ScopedTypeVariables, TemplateHaskell, TupleSections, FlexibleContexts, FlexibleInstances, UndecidableInstances, GeneralizedNewtypeDeriving, TypeFamilies #-}
 
 module Database.Perdure.State(
-  RootState(stateLocation, stateSpace, stateRoot),
-  --unsafeRootState,
+  PState(stateLocation, stateSpace, stateRoot),
+  --initStateN,
   Root(..),
   RootValues(..),
   rootAllocSize,
@@ -31,10 +31,8 @@ module Database.Perdure.State(
   emptyCache,
   module Database.Perdure.Space,
   module Database.Perdure.Persistent,
-  No,
-  no,
-  May(..),
-  StateLocation(..),
+  CachedFile(..),
+  RootLocation(..),
   RootAddress(..),
   stateValue
   ) where
@@ -87,8 +85,10 @@ import Database.Perdure.Allocator
 moduleName :: String
 moduleName = "Database.Perdure.State"
 
--- | The StateLocation specifies where roots are written, and provides a cache.
-data StateLocation = StateLocation WriteStoreFile (MVar Cache) [RootAddress]
+data CachedFile = CachedFile ReplicatedFile (MVar Cache)
+
+-- | The RootLocation specifies where roots are written, and provides a cache.
+data RootLocation = RootLocation CachedFile [RootAddress]
 
 -- | A number which is incremented every time a state is written.
 newtype StateId = StateId Word64 deriving (Ord, Eq, Show, Enum, Bounded, Persistent, Num, Real, Integral)
@@ -97,18 +97,17 @@ newtype RootAddress = RootAddress {getRootAddress :: Address} deriving (Eq, Show
 rootRef :: LgMultiple Word64 w => RootAddress -> BasicRef w
 rootRef (RootAddress a) = BasicRef a $ refineLen rootAllocSize
 
--- | The RootState represents the whole state of the database. It is needed to perform updates.
-data RootState m a = RootState {
-  stateLocation :: StateLocation,
+-- | The PState represents the whole state of the database. It is needed to perform updates.
+data PState a = PState {
+  stateLocation :: RootLocation,
   stateSpace :: SpaceTree,
   -- ^ stateSpace is always a subset of (or the same as) the true free space as determined by scanning rootScan from rootScan's s and c
   -- This subset is maintained conservatively to speed up new allocations.
-  stateRoot :: m (Root a) -- ^ The persisted data consisting of bookkeeping data and user data.
+  stateRoot :: Root a -- ^ The persisted data consisting of bookkeeping data and user data.
   }
 
-
-stateValue :: Functor m => RootState m a -> m a
-stateValue = fmap (deref . rootValue . rootScan) . stateRoot
+stateValue :: PState a -> a
+stateValue = deref . rootValue . rootScan . stateRoot
 
 -- LATER For now a root occupies a constant space (an id and 4 DRefs). It would be preferable to
 -- not use a CDRef of a but a SizeRef that would allow us to write more data in the root (keeping in mind though that we need room
@@ -130,49 +129,49 @@ data RootValues a = RootValues {
 instance (Persistent a, Typeable a) => Persistent (RootValues a) where 
   persister = structureMap persister
 
--- | Create an initial state that can then be used with writeState to initialize a new database.
+-- | Writes an initial state (creates a new database).
+-- Most often the passed 'a' will be a fresh unpersisted value. This is always safe.
+-- However it is legal for parts of 'a' to be already persisted, but they must only use allocations within the passed SpaceTree.
 -- To read the state of an existing database use readState.
-initState :: StateLocation -> SpaceTree -> RootState No a
-initState l s = RootState l s no
+initState :: (Persistent a, Typeable a) => RootLocation -> SpaceTree -> a -> IO (PState a)
+initState = initStateN minBound
+
+-- | The persisted value 'a' must only use memory contained in 'SpaceTree'.
+initStateN :: (Persistent a, Typeable a) => StateId -> RootLocation -> SpaceTree -> a -> IO (PState a)
+initStateN i l s a = 
+  let sb = SpaceBook MS.emptySet s
+      s' = bookSpace $ incr persister a sb -- Before we can write anything else, we need to know what memory is actually free.
+  in await0 $ writeRootSimple l s' $ Root i Nothing $ RootValues (ref sb) (ref a) 
 
 -- | Reads the state of an existing database. It only reads the root, and the rest is lazy loaded.
--- The StateLocation must match the one use when writing. On failure it returns Nothing.
-readState :: (Persistent a, Typeable a) => StateLocation -> IO (Maybe (RootState Identity a))
-readState l@(StateLocation f c rootAddrs) = 
-  fmap (\r -> RootState l (bookSpace $ incr persister (rootScan r) $ deref $ rootCS $ rootScan r) $ Identity r) . 
-  maybeMaximumBy (comparing rootId) . catMaybes <$> sequence (readRoot f c <$> rootAddrs)
+-- The RootLocation must match the one use when writing. On failure it returns Nothing.
+readState :: (Persistent a, Typeable a) => RootLocation -> IO (Maybe (PState a))
+readState l@(RootLocation f rootAddrs) = 
+  fmap (\r -> PState l (bookSpace $ incr persister (rootScan r) $ deref $ rootCS $ rootScan r) r) . 
+  maybeMaximumBy (comparing rootId) . catMaybes <$> sequence (readRoot f <$> rootAddrs)
 
 -- | Create an empty cache of the specified size (number of dereferenced DRefs).
 -- Note that eventually we would like a cache with a size measured in bytes, for a better prediction of memory consumption.
 emptyCache :: Integer -> Cache
 emptyCache sz = LRU.fromList (Just sz) []
 
--- | We reserve the option of growing roots to 1MB, so use this as a minimum distance between the various RootAddress in StateLocation
+-- | We reserve the option of growing roots to 1MB, so use this as a minimum distance between the various RootAddress in RootLocation
 rootAllocSize :: Len Word64 Word32
 rootAllocSize = coarsenLen (unsafeLen (1024 * 1024) :: Len Word8 Word32)
 
 -- For now, asyncWriteState should be used synchronously (with await0) because we have no flow control on the StoreFile.
--- asyncWriteState returns both a Root and RootState. Root is what has been written. RootState is a
--- a function of Root which abstracts some details. RootState is sufficient to perform the next writeState.
-asyncWriteState :: (Persistent a, Typeable a, May m) => a -> RootState m a -> IO () -> IO (RootState Identity a)
-asyncWriteState a (RootState l s mr_) = 
-  maybe 
-  (writeRootSimple l s $ Root minBound Nothing $ RootValues (ref (SpaceBook emptySet s)) $ ref a) 
-  (asyncWriteState1 a . RootState l s . Identity)
-  $ mayGet mr_
+asyncWriteState :: (Persistent a, Typeable a) => a -> PState a -> IO () -> IO (PState a)
+asyncWriteState a rs = 
+  (if rootId (stateRoot rs) `mod` collectFrequency == 0 then \w k -> collectState rs >>= ($ k) . w else ($ rs)) $
+  \(PState l s (Root i d (RootValues rcs _))) -> writeRootSimple l s $ Root (succ i) d $ RootValues rcs $ ref a
   
 collectFrequency :: StateId
 collectFrequency = 1000
 
-asyncWriteState1 :: (Persistent a, Typeable a) => a -> RootState Identity a -> IO () -> IO (RootState Identity a)
-asyncWriteState1 a rs = 
-  (if rootId (runIdentity $ stateRoot rs) `mod` collectFrequency == 0 then \w k -> collectState rs >>= ($ k) . w else ($ rs)) $
-  \(RootState l s (Identity (Root i d (RootValues rcs _)))) -> writeRootSimple l s $ Root (succ i) d $ RootValues rcs $ ref a
-
-writeRootSimple :: forall a. (Persistent a, Typeable a) => StateLocation -> SpaceTree -> Root a -> IO () -> IO (RootState Identity a)
-writeRootSimple l@(StateLocation f cache _) s r done = 
-  fmap (\(r', _ :: MapMultiset Address, s') -> RootState l s' $ Identity r') $ -- We may want to rewrite 'write' so it does not produce counts, and drop the Multiset c context
-  writeRoot (rootId r) l done $ write f cache s r
+writeRootSimple :: forall a. (Persistent a, Typeable a) => RootLocation -> SpaceTree -> Root a -> IO () -> IO (PState a)
+writeRootSimple l@(RootLocation f _) s r done = 
+  fmap (\(r', _ :: MapMultiset Address, s') -> PState l s' r') $ -- We may want to rewrite 'write' so it does not produce counts, and drop the Multiset c context
+  writeRoot (rootId r) l done $ write f s r
 
 -- | Takes the current state and the new value to be written, and writes and returns a new state. Writing is strict so make sure you do
 -- not have cycles in the value to be written. After writing, you should no longer use the value you passed in, but instead use the
@@ -182,25 +181,25 @@ writeRootSimple l@(StateLocation f cache _) s r done =
 -- the new value will be a function of the old one, and the strict write process will force parts of the old value to be read. If
 -- by accident you do use a value which was overwritten, its digests will be incorrect (with very high probability) and deref will return error.
 -- This calls collectState implicity once every 1000 calls. We will make this optional in future revisions.
-writeState :: (Persistent a, May m, Typeable a) => a -> RootState m a  -> IO (RootState Identity a)
+writeState :: (Persistent a, Typeable a) => a -> PState a  -> IO (PState a)
 writeState a r = await0 $ asyncWriteState a r
 
 -- | Writes a new state if the passed state change requires it. The StateT monad used here is like the usual StateT monad but
 -- it has an additional 'unchanged' case which allow us to avoid needless writes.
-updateState :: (Persistent a, Typeable a) => M.StateT a IO b -> M.StateT (RootState Identity a) IO b
+updateState :: (Persistent a, Typeable a, MonadIO m) => M.StateT a m b -> M.StateT (PState a) m b
 updateState = updateStateRead . M.mapStateT lift
 
--- | Like updateState but the updater has access to the input RootState throught an additional ReaderT
-updateStateRead :: (Persistent a, Typeable a) => M.StateT a (ReaderT (RootState Identity a) IO) b -> M.StateT (RootState Identity a) IO b
+-- | Like updateState but the updater has access to the input PState throught an additional ReaderT
+updateStateRead :: (Persistent a, Typeable a, MonadIO m) => M.StateT a (ReaderT (PState a) m) b -> M.StateT (PState a) m b
 updateStateRead (M.StateT u) = 
-  M.StateT $ \t -> runReaderT (u (deref $ rootValue $ rootScan $ runIdentity $ stateRoot t)) t 
-                   >>= \(b, ma') -> fmap (b,) $ maybe (return Nothing) (fmap Just . flip writeState t) ma'
+  M.StateT $ \t -> runReaderT (u (deref $ rootValue $ rootScan $ stateRoot t)) t 
+                   >>= \(b, ma') -> liftM (b,) $ maybe (return Nothing) (liftM Just . liftIO . flip writeState t) ma'
 
 -- collectState could overlap some of its work with normal writes. It could increment the latest state it sees when it starts, then decrement the old
 -- state, and finally do an atomic update of the state, rereading it to integreate any new states which have been added in the mean time. But we
 -- leave that for later.
-asyncCollectState :: (Persistent a, Typeable a) => RootState Identity a -> IO () -> IO (RootState Identity a)
-asyncCollectState (RootState l@(StateLocation _ ch _) _ (Identity (Root i md d'@(RootValues rcs ra)))) done = -- we ignore s
+asyncCollectState :: (Persistent a, Typeable a) => PState a -> IO () -> IO (PState a)
+asyncCollectState (PState l _ (Root i md d'@(RootValues rcs ra))) done = -- we ignore s
   let rcs'@(SpaceBook _ s') = trace "starting increment"  $ incr persister d' $ deref rcs
   in writeRootSimple l s' (Root (succ i) (Just d') $ RootValues (ref $ decr persister md rcs') ra) done
      -- we write s'' but we do not use it, it will be used on next collectState
@@ -210,23 +209,16 @@ asyncCollectState (RootState l@(StateLocation _ ch _) _ (Identity (Root i md d'@
 -- the current value, and then does a decrement pass on the value that was present at the last collection. Only new allocations are
 -- scanned in the increment pass, not what was already allocated at the last collection. The decrement pass only traverses
 -- the allocations that need to be deallocated.
-collectState :: (Persistent a, Typeable a) => RootState Identity a -> IO (RootState Identity a)
+collectState :: (Persistent a, Typeable a) => PState a -> IO (PState a)
 collectState r = await0 $ asyncCollectState r
 
-collectStateM :: (Persistent a, Typeable a) => M.StateT (RootState Identity a) IO ()
+collectStateM :: (Persistent a, Typeable a) => M.StateT (PState a) IO ()
 collectStateM = get >>= lift . collectState >>= put
-
--- | The persisted value 'a' must only use memory contained in 'SpaceTree'.
-unsafeRootState :: (Persistent a, Typeable a) => StateId -> StateLocation -> SpaceTree -> a -> IO (RootState Identity a)
-unsafeRootState i l s a = 
-  let sb = SpaceBook MS.emptySet s
-      s' = bookSpace $ incr persister a sb -- Before we can write anything else, we need to know what memory is actually free.
-  in await0 $ writeRootSimple l s' $ Root i Nothing $ RootValues (ref sb) (ref a) 
 
 ---------------
 
-writeRoot :: StateId -> StateLocation -> IO () -> StateT (ABitSeq RealWorld) IO a -> IO a
-writeRoot i (StateLocation f _ roots) done writer = do
+writeRoot :: StateId -> RootLocation -> IO () -> StateT (ABitSeq RealWorld) IO a -> IO a
+writeRoot i (RootLocation (CachedFile f _) roots) done writer = do
   start <- stToIO mkABitSeq
   (result, end) <- runStateT writer start
   {-# SCC "barrier" #-} storeFileFullBarrier f -- If the following write completes, we want to assume that all preceeding writes completed
@@ -248,14 +240,14 @@ writeRoot i (StateLocation f _ roots) done writer = do
 -- overwriting the allocations of the previous state, otherwise the system would not be resumable after a crash.
 
 write :: (Multiset c, Persistent a', Space ls) => 
-         WriteStoreFile -> MVar Cache -> ls -> a' -> StateT (ABitSeq RealWorld) IO (a', c Address, ls)
-write f c ls a' = {-# SCC "serialize" #-} StateT $ \s -> do
+         CachedFile -> ls -> a' -> StateT (ABitSeq RealWorld) IO (a', c Address, ls)
+write (CachedFile f c) ls a' = {-# SCC "serialize" #-} StateT $ \s -> do
   cd <- newMVar emptySet
   lv <- newMVar ls
   cSer persister (c, StateAllocator f lv, Just cd) (\a'' s' -> readMVar lv >>= \ls' -> readMVar cd >>= \u -> return ((a'', u, ls'), s')) a' s
 
-readRoot :: forall a d f. (Persistent a, Typeable a) => WriteStoreFile -> MVar Cache -> RootAddress -> IO (Maybe (Root a))
-readRoot f c rootAddr =
+readRoot :: forall a d f. (Persistent a, Typeable a) => CachedFile -> RootAddress -> IO (Maybe (Root a))
+readRoot (CachedFile f c) rootAddr =
   fmap (deserializeFromFullArray $ apply cDeser persister $ DeserializerContext f c) <$> 
   foldM (\result next -> maybe next (return . Just) result) Nothing readRootDataWE where
     readRootData :: forall w. ValidationDigestWord w => Endianness -> Tagged w (IO (Maybe (ArrayRange (PrimArray Free Word))))
@@ -266,17 +258,7 @@ readRoot f c rootAddr =
 
 ---------------
 
-type No = Constant ()
-no = Constant ()
--- Types in May are subtypes of Maybe. There is Maybe itself. Constant () is like Maybe but where we statically know the value to be Nothing.
-class Functor m => May m where mayGet :: m a -> Maybe a
-instance May (Constant ()) where mayGet (Constant ()) = Nothing
-instance May Maybe where mayGet = id
-instance May Identity where mayGet = Just . runIdentity
-
----------------
-
-data StateAllocator a = StateAllocator WriteStoreFile (MVar a)
+data StateAllocator a = StateAllocator ReplicatedFile (MVar a)
 
 instance Space a => Allocator (StateAllocator a) where
   allocatorStoreFile (StateAllocator f _) = f

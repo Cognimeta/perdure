@@ -45,13 +45,11 @@ description:
 	     persistence layer level. This seems appropriate given the increasing need for geographically distributed
 	     replication.
 	     .
-	     The persistence model is single threaded. Persistence occurs in discrete steps and must be hosted in some
-	     thread's IO monad.  Within a step, multiple threads or sparks can be used to examine the current state and
-	     compute the next state to be persisted.
+	     Persistence occurs in discrete transactions which run in the IO monad. Transactions may be requested by
+	     multiple threads but they may block until they get their turn. Within a transaction, multiple threads or sparks
+	     can be used to examine the current state and compute the next state to be persisted.
 	     .
-	     Reference counting is used to automatically reclaim unused storage. Memory references are not tracked. It
-	     is assumed that the current persisted state is the only root for persistent GC purposes. So no reference
-	     must be kept to previous persisted states.
+	     Reference counting is used to automatically reclaim unused storage.
 	     .
 	     Since persisted data is immutable, it is trivial for applications to keep some or all historical states by
 	     using a list-like type as their root persisted type. Those past states can be used for analysis or possibly
@@ -69,6 +67,10 @@ description:
 	     * There is a mechanism for the application to evolve the type of persisted data, but we have yet to apply
 	     the mechanism to the library itself, so until we put that in place future releases of this library may
 	     require more cumbersome database upgrades.
+	     .
+	     * Memory references are not tracked. At this point it is assumed that the current persisted state is the
+	     only root for persistent GC purposes. So no reference must be kept to previous persisted states. This is
+	     not enforced by the API so care is needed.
 	     .
 	     * Care is needed by the application developers to ensure they do not change type persisters. The persisters
 	     themselves are not persisted so the library cannot verify that it is using the same persister as with
@@ -113,7 +115,7 @@ description:
 	     * Documentation and examples are not sufficient and should be our first focus. For a minimal example,
 	     look at Database.Perdure.TestState.testStatesF in exe-src.
 	     .
-	     Given those limitation, Perdure™ is not applicable for very large scale projects at the moment. But it can
+	     Given those limitations, Perdure™ is not applicable for very large scale projects at the moment. But it can
 	     be ideal for smaller projects where there is no point in burdening the developer with a distinct data
 	     model. It can also be used as a temporary solution before integrating to external databases. 
 	     .
@@ -144,6 +146,7 @@ library
     cpp-options: -DWORDSIZE=64
   extensions: CPP
   exposed-modules:
+    Database.Perdure
     Database.Perdure.AllocCopy
     Database.Perdure.Allocator
     Database.Perdure.ArrayRef

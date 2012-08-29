@@ -55,7 +55,7 @@ deserializeFromFullArray d arr = case deserializeFromArray d arr of
 
 -- | The passed persister must have no references
 unsafeSeqDeserializer :: Persister a -> Deserializer Free a
-unsafeSeqDeserializer p = cDeser p (DeserializerContext (error "seqDeserializer has no file" :: WriteStoreFile) (error "seqDeserializer has no cache"))
+unsafeSeqDeserializer p = cDeser p (DeserializerContext (error "seqDeserializer has no file" :: ReplicatedFile) (error "seqDeserializer has no cache"))
 
 cDeser :: Persister a -> DeserializerContext -> Deserializer Free a
 cDeser p = case p of

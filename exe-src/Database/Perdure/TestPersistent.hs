@@ -59,6 +59,7 @@ import Control.Monad.Random
 import Control.Concurrent.MVar
 import Cgm.Data.Typeable
 import Database.Perdure.TestState
+import Database.Perdure
 
 -- | We test with some type of tree with variable arity and nodes of various sizes.
 data TestTree a = Leaf a | Node [a] [SRef (TestTree a)] deriving (Show, Eq, Typeable)
@@ -77,14 +78,22 @@ instance (Persistent a, Typeable a, Arbitrary a) => Arbitrary (TestTree a) where
 -- | We establish a default persister for TestTree, which will simply persist it according to the internal structure.
 instance (Persistent a, Typeable a) => Persistent (TestTree a) where persister = structureMap persister
 
+testInitState :: (Typeable a, Persistent a) => ReplicatedFile -> a -> IO (PState a)
+testInitState f a = fmap defaultRootLocation (newCachedFile 1000 f) >>= \l -> 
+  initState l
+  (addSpan (sortedPair (2 * apply super (getLen rootAllocSize)) $ 100 * 1000000) emptySpace)
+  a
+
 writeReadTestFile :: (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
 writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
   putCpuTime "Data creation" $ evaluate $ prnf persister a
-  i <- testInitState f
-  final <- writeState a i >>= writeState a
-  readCache <- newMVar (emptyCache 1000)
-  readState <- fromMaybe (error "No valid roots") <$> readState (StateLocation f readCache testRootAddresses)
-  putCpuTime "Read time" $ evaluate $ a == (runIdentity $ stateValue readState)
+  putCpuTime "Write time" $
+    newCachedFile 1000 f >>=
+    createPVar a (mega 100) . defaultRootLocation
+  putCpuTime "Read time" $
+    newCachedFile 1000 f >>=
+    fmap (fromMaybe $ error "Read error") . openPVar . defaultRootLocation >>= \v ->
+    updatePVar v $ get >>= liftIO . evaluate . (a ==)
 
 
 testPersistent  :: a -> IO ()

@@ -46,7 +46,7 @@ module Database.Perdure.Persistent (
   shortcutPersister,
   (>.),
   listPersister,
-  WriteStoreFile,
+  ReplicatedFile,
   module Database.Perdure.CRef,
   DeserializerContext(..),
   DRef(..), --FIXME, we want to export constructor only to implementors

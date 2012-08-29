@@ -16,7 +16,6 @@ or implied. See the License for the specific language governing permissions and 
 module Database.Perdure.Allocator (
   Allocator(..),
   allocWrite,
-  WriteStoreFile,
   module Database.Perdure.StoreFile,
   module Database.Perdure.LocalStoreFile,
   module Database.Perdure.SingleStoreFile,
@@ -35,14 +34,11 @@ import Cgm.Data.Array
 import Cgm.Data.Super
 import Cgm.System.Endian
   
-type WriteStoreFile = ReplicatedFile
-
-
 class Allocator l where 
   alloc :: l -> Len Word64 Word64 -> IO (Len Word64 Word64) -- take required size, and returns the address
-  allocatorStoreFile :: l -> WriteStoreFile
+  allocatorStoreFile :: l -> ReplicatedFile
 
-allocWrite :: (Allocator l, LgMultiple Word64 w, Endian w) => l -> Endianness -> [PrimArray Pinned w] -> IO (StoreRef WriteStoreFile w)
+allocWrite :: (Allocator l, LgMultiple Word64 w, Endian w) => l -> Endianness -> [PrimArray Pinned w] -> IO (StoreRef ReplicatedFile w)
 allocWrite l e as = do
     addr <- alloc l $ apply super (coarsenLen $ sum $ arrayLen <$> as :: Len Word64 Word)
     storeFileWrite (allocatorStoreFile l) addr e as
