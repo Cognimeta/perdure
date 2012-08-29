@@ -20,8 +20,8 @@ description:
 	     minimize the scope of changes required to make an application persistent.
 	     . 
 	     The persistence process is strict, it does not persist thunks or closures, but only the fully evaluated
-	     data, which must be acyclic.  It also requires some changes to the data types and algorithms. References
-	     must be inserted at some strategic places within data structures.  These cut the structure into separately
+	     data, which must be acyclic. It also requires some changes to the data types and algorithms. References
+	     must be inserted at some strategic places within data structures. These cut the structure into separately
 	     loadable parts. These parts should hold at least a few hundred bytes to reduce the frequency of disk
 	     reads. The application has control over the representation so it can optimize it in terms of the
 	     anticipated access patterns. A SizeRef reference type is provided which separates automatically if its size
@@ -45,7 +45,7 @@ description:
 	     persistence layer level. This seems appropriate given the increasing need for geographically distributed
 	     replication.
 	     .
-	     Persistence occurs in discrete transactions which run in the IO monad. Transactions may be requested by
+	     Persistence occurs in discrete transactions. These run in the IO monad. Transactions may be requested by
 	     multiple threads but they may block until they get their turn. Within a transaction, multiple threads or sparks
 	     can be used to examine the current state and compute the next state to be persisted.
 	     .
@@ -62,30 +62,33 @@ description:
 	     and word size of the referent representation so databases can be moved between platforms without
 	     any conversion, and they could be read concurrently by different platforms.
 	     .
-	     This library is young and there remains limitations that will need to be addressed in future releases:
+	     A general mechanism 'Database.Perdure.Rev' is provided to upgrade the persisted types.
+	     Its goal is similar to that of the safecopy package. Here however, the Rev module simply exports a type
+	     that is similar to Either but whose persister leaves room in the representation to accomodate future
+	     versions. We use it to create growing lists of alternatives such as User1.User :> User0.User :> NoRev.
+	     This type should always be your root persisted type. You should also use it on the nested parts of
+	     your data whose type is more subject to change: this will avoid having to propagate all type changes up
+	     to the root.
 	     .
-	     * There is a mechanism for the application to evolve the type of persisted data, but we have yet to apply
-	     the mechanism to the library itself, so until we put that in place future releases of this library may
-	     require more cumbersome database upgrades.
+	     This library is young and there remains limitations that will need to be addressed in future releases:
 	     .
 	     * Memory references are not tracked. At this point it is assumed that the current persisted state is the
 	     only root for persistent GC purposes. So no reference must be kept to previous persisted states. This is
-	     not enforced by the API so care is needed.
+	     not enforced by the API so care is needed. Otherwise dereferencing a dangling reference might fail
+	     (but will not return bad data thanks to the digest).
 	     .
 	     * Care is needed by the application developers to ensure they do not change type persisters. The persisters
 	     themselves are not persisted so the library cannot verify that it is using the same persister as with
 	     previous executions. There are two problems with persisting persisters: they are not acyclic, and they
 	     refer to user specified bijections. We encourage you to treat types and persisters as immutable code. Put
 	     each persisted type in a distinct file, such as User0.hs. When a revision is needed create User1.hs.
-	     Use Database.Perdure.Rev to define an extensible representation such as User1.User :> User0.User :> NoRev.
 	     .
 	     * The current allocation strategy is trivial. We must add a new node type in the free space representation
 	     that will allow us to search efficiently for a block of sufficient size. We currently scan all free
 	     intervals from the start. This relatively simple fix should be done shortly, but until it is done the library will
 	     not be appropriate for databases beyond ~100MB.
 	     .
-	     * Reclamation of free space occurs after every fixed number of state writes. We will provide better control
-	     shortly.
+	     * Reclamation of free space simply occurs after some fixed number of state writes.
 	     .
 	     * Replication is local only at the moment. We write to all replicas, and read from the first correct one. We
 	     need to support remote storage which can become temporarily unavailable, and user controlled policies
@@ -117,7 +120,7 @@ description:
 	     .
 	     Given those limitations, Perdure™ is not applicable for very large scale projects at the moment. But it can
 	     be ideal for smaller projects where there is no point in burdening the developer with a distinct data
-	     model. It can also be used as a temporary solution before integrating to external databases. 
+	     model. It can also be used as a temporary solution before integrating to external databases.
 	     .
 	     Cognimeta's Iota Charts web application <https://iotacharts.com>, is based on Perdure™ and has been has
 	     been live for close to a year. Its database is relatively small at ~80MB currently, but we have been very

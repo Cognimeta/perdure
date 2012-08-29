@@ -74,8 +74,8 @@ revPersister = summationPersister persister deserRev serRev
 instance Persistent NoRev where persister = revPersister
 instance PersistentRev (b :> r) => Persistent (b :> r) where persister = revPersister                                
 
+-- | This is not a legal lens since it violates the law which says that setting back what you got must have no effect.
+-- Here it is almost true since the only effect it has is to upgrade to the current representation, an idempotent change
+-- for a semantically equivalent value.                                                             
 latestLens :: (b -> a) -> Lens (a :> b) a
 latestLens toLatest = lens (toCurrent toLatest) (const . Current)
-
--- Easy to implement, a bit more general than (&.), but does not belong in FixedPersister. Does not seem to help up with coproducts.
---Persister a -> (a -> Persister b) -> Persister (a, b)
