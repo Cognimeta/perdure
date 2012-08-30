@@ -132,7 +132,7 @@ description:
 	     data.  Also Cognimeta has been using Haskell exclusively, and has benefited from many
 	     excellent open source libraries. We are happy to contribute back, and are hoping for constructive and
 	     critical feedback from this very bright community.
-category: Databases
+category: Database
 author: Patrick Premont for Cognimeta Inc.
 tested-with:
 data-files:
