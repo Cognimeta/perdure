@@ -1,5 +1,5 @@
 Name: perdure
-version: 0.1.0
+version: 0.1.1
 cabal-version: >= 1.8
 build-type: Simple
 license: OtherLicense
@@ -235,7 +235,7 @@ executable perdure
     mtl >= 2.1.2,
     deepseq,
     QuickCheck >=2.4.0.1,
-    perdure >= 0.1.0,
+    perdure >= 0.1.1,
     transformers >= 0.3.0.0,
     bytestring >= 0.9.2.1,
     containers >= 0.4.2.1,
