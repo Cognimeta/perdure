@@ -45,7 +45,6 @@ invalidArgs = putStrLn $ "Invalid arguments, first argument should be one of " +
 
 mains :: [(String, [String] -> IO ())]
 mains = [
-  $(label 'testFile),
     $(label 'testStoreFile),
   $(label 'testPersistent),
     $(label 'testPersistentMap),

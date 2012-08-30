@@ -204,7 +204,7 @@ updateStateRead (M.StateT u) =
 -- leave that for later.
 asyncCollectState :: (Persistent a, Typeable a) => PState a -> IO () -> IO (PState a)
 asyncCollectState (PState l _ rvers) done = -- we ignore s
-  let rcs'@(SpaceBook _ s') = trace "starting increment"  $ incr persister d' $ deref rcs
+  let rcs'@(SpaceBook _ s') = incr persister d' $ deref rcs
       (Root i md d'@(RootValues rcs ra)) = toOnlyRev rvers
   in writeRootSimple l s' (Current $ Root (succ i) (Just d') $ RootValues (ref $ decr persister md rcs') ra) done
      -- we write s'' but we do not use it, it will be used on next collectState

@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TypeFamilies, Rank2Types, GADTs, TupleSections, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, Rank2Types, GADTs, TupleSections, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables, FlexibleContexts #-}
 
 module Database.Perdure.LocalStoreFile (
     RawStoreFile(..),
@@ -21,7 +21,6 @@ module Database.Perdure.LocalStoreFile (
     withFileStoreFile,
     withRawDeviceStoreFile,
     withRawDeviceStoreFiles,
-    testFile,
     module Database.Perdure.StoreFile,
     narrowBufsLen,
     storeFileWrite1,
@@ -66,6 +65,7 @@ import Data.Bits
 import Control.Monad.Error hiding (sequence_)
 import Database.Perdure.StoreFile(SyncableStoreFile(..))
 import Debug.Trace
+import Control.DeepSeq
 --import System.Posix.Fsync -- not needed with raw devices
 
 class SyncableStoreFile f => RawStoreFile f where
@@ -109,6 +109,20 @@ instance Show RWOp where
   show (WriteOp as _) = "WriteOp " ◊ show (sum $ fmap arrayLen as)
   show (ReadOp a _) = "ReadOp " ◊ show (arrayLen a)
 
+-- TODO investigate why if we do not at force the ByteAddr in PosOp, testStatesDag ends with STM error
+-- Forcing the rest is not necessary for this bug but makes sense here. We do not want the file thread to do work
+-- that should have been done by the client threads. NFData is tricky to use here so we put together this
+-- custom method.
+forceDevOp :: DevOp -> ()
+forceDevOp = either
+             (\(PosOp b r) -> (b `seq`) $
+                              case r of
+                                WriteOp as _ -> sum (fmap arrayLen as) `seq` ()
+                                ReadOp a _ -> arrayLen a `seq` ())
+             (\n -> case n of
+                 Sync _ -> ()
+                 FullBarrier -> ())
+
 instance RawStoreFile LocalStoreFile where
   storeFileWriteRaw f seek bufs k = queue f $ Left $ PosOp seek $ WriteOp bufs k
   storeFileReadRaw f seek buf k = queue f $ Left $ PosOp seek $ ReadOp buf k
@@ -117,10 +131,8 @@ instance SyncableStoreFile LocalStoreFile where
   storeFileSync f k = queue f $ Right $ Sync k
   storeFileFullBarrier f = queue f $ Right FullBarrier
 
---TODO Investigate: The "About to queue" show below forces op before we send it to another thread, and without it
---we had crashes.
 queue :: LocalStoreFile -> DevOp -> IO () 
-queue (LocalStoreFile c) op = putStrLn ("About to queue " ++ show op) >> putMVar c op {- >> putStrLn ("Queued " ++ show op) -}
+queue (LocalStoreFile c) op = evaluate (forceDevOp op) >> putMVar c op {- >> putStrLn ("Queued " ++ show op) -}
 
 -- TODO rework sync mechanism. It was fine when we assumed that all completed write tasks completed successfully, but if some are
 -- to remote files that time out, we want to know when all write completed successfully.
@@ -136,9 +148,9 @@ storeFileWrite1 f addr e bufs =
 storeFileRead1 :: (RawStoreFile f, Validator v, ValidatedElem v ~ w, Endian w, LgMultiple w Word8) => 
                    f -> Len Word64 Word64 -> Len w Word32 -> Endianness -> v -> Async (Maybe (ArrayRange (PrimArray Pinned w))) ()
 storeFileRead1 f addr size e v k =
-    ($ k) $ mapAsync (return . (>>= logWhenBad . validate v . fullArrayRange)) $ storeFileReadWords f (refineLen addr) e size where
+    ($ k) $ mapAsync (return . (>>= {-logWhenBad .-} validate v . fullArrayRange)) $ storeFileReadWords f (refineLen addr) e size {-where
       logWhenBad Nothing = trace "Validation failed" Nothing
-      logWhenBad (Just x) = Just x
+      logWhenBad (Just x) = Just x-}
 
 -- After inspection of GHC.IO.FD, it seems that hFlush only flushes to the OS
 -- Call chain:  
@@ -320,10 +332,4 @@ withRawFile f user = do
   chan <- newEmptyMVar
   runWithDeamon 
     ("User of " ++ show f, user $ LocalStoreFile chan) 
-    ("Server for " ++ show f, bracket_ (return ()) (putStrLn $ "Server for " ++ show f ++ " ended") $ process chan f (emptySchedule :: CLook))
-
--- Note using raw devices should improve performance (See http://en.wikipedia.org/wiki/Raw_device)
-
-testFile args = withBinaryFile "C:/Users/ppremont/Desktop/test/test.dag" ReadWriteMode $ \h -> do 
-  hSeekX h 10000000001
-  print h
+    ("Server for " ++ show f, bracket_ (return ()) (return (){-putStrLn $ "Server for " ++ show f ++ " ended"-}) $ process chan f (emptySchedule :: CLook))

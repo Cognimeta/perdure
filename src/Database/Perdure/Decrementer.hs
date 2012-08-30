@@ -58,5 +58,5 @@ unsafeClearCache c addr = unsafePerformIO $ modifyMVar_  c $ return . fst . LRU.
 decrRef :: forall w. LgMultiple Word64 w => 
            BasicRef w -> (SpaceBook -> SpaceBook) -> SpaceBook -> SpaceBook
 decrRef r onDealloc sb@(SpaceBook c s) =
-  maybe ((\(SpaceBook c s') -> SpaceBook c (trace ("freeing span " ++ show (refSpan r)) $ addSpan (refSpan r) s')) $ onDealloc sb) 
+  maybe ((\(SpaceBook c s') -> SpaceBook c ({-trace ("freeing span " ++ show (refSpan r)) $-} addSpan (refSpan r) s')) $ onDealloc sb)
   (flip SpaceBook s) $ MS.delete (refStart r) c

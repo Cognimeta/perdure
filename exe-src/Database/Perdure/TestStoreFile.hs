@@ -14,8 +14,7 @@ or implied. See the License for the specific language governing permissions and 
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Database.Perdure.TestStoreFile (
-  testStoreFile,
-  testFile
+  testStoreFile
   ) where
 
 import Data.Word
