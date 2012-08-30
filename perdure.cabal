@@ -1,5 +1,5 @@
 Name: perdure
-version: 0.1.1
+version: 0.1.2
 cabal-version: >= 1.8
 build-type: Simple
 license: OtherLicense
@@ -228,6 +228,10 @@ executable perdure
   hs-source-dirs: exe-src
   main-is: Main.hs
   other-modules: 
+    Database.Perdure.TestMap
+    Database.Perdure.TestPersistent
+    Database.Perdure.TestState
+    Database.Perdure.TestStoreFile
   build-depends:
     base >= 4.5.0.0,
     template-haskell >= 2.7.0.0,
@@ -235,7 +239,7 @@ executable perdure
     mtl >= 2.1.2,
     deepseq,
     QuickCheck >=2.4.0.1,
-    perdure >= 0.1.1,
+    perdure >= 0.1.2,
     transformers >= 0.3.0.0,
     bytestring >= 0.9.2.1,
     containers >= 0.4.2.1,
