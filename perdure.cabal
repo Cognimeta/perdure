@@ -56,15 +56,15 @@ description:
 	     to recover data lost because of an application-level error. The library includes a History data type which
 	     automatically preserves a greater number of recent states and fewer older states.
 	     .
-	     We support both 32bit and 64bit architectures, for both endiannesses. We allow platforms
-	     to write data and generate digests in their native format for maximum speed, but they should be able to read
-	     the data written by other platforms with the necessary conversions. Each reference store the endianness
-	     and word size of the referent representation so databases can be moved between platforms without
-	     any conversion, and they could be read concurrently by different platforms.
+	     We support 32bit, 64bit, little-endian and big-endian architectures. We allow platforms to write data and
+	     generate digests in their native format for maximum speed, but they should be able to read the data written
+	     by other platforms with the necessary conversions. Each reference stores the endianness and word size of the
+	     referent representation so databases can be moved between platforms without any conversion, and they could
+	     be read concurrently by different platforms.
 	     .
 	     A general mechanism 'Database.Perdure.Rev' is provided to upgrade the persisted types.
 	     Its goal is similar to that of the safecopy package. Here however, the Rev module simply exports a type
-	     that is similar to Either but whose persister leaves room in the representation to accomodate future
+	     that is similar to Either but whose persister leaves room in the representation to accommodate future
 	     versions. We use it to create growing lists of alternatives such as User1.User :> User0.User :> NoRev.
 	     This type should always be your root persisted type. You should also use it on the nested parts of
 	     your data whose type is more subject to change: this will avoid having to propagate all type changes up
@@ -126,7 +126,7 @@ description:
 	     been live for close to a year. Its database is relatively small at ~80MB currently, but we have been very
 	     pleased with the results.
 	     .
-	     Perdure™ has been developped by Cognimeta Inc. over the past two years. We are releasing this as open
+	     Perdure™ has been developed by Cognimeta Inc. over the past two years. We are releasing this as open
 	     source under the permissive Apache license 2.0. The persistence mechanism is relatively simple and concise
 	     and its open source nature can provide the inquisitive user with added confidence about the security of its
 	     data.  Also Cognimeta has been using Haskell exclusively, and has benefited from many
