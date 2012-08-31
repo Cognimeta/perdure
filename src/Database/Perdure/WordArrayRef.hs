@@ -22,7 +22,6 @@ import Cgm.Prelude
 import Cgm.Data.Word
 import Database.Perdure.ArrayRef
 import Database.Perdure.CDeserializer
-import Database.Perdure.Persistent
 
 -- | When we write Words and read them back on a platform with a different Word size, the array length changes,
 -- and each Word64 is replaced by two consecutive Words32 (least-significant first), (the reverse substitution is applied

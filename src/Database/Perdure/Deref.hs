@@ -26,7 +26,7 @@ import Cgm.Data.Maybe
 import Cgm.Control.Combinators
 import Database.Perdure.Persistent
 import Database.Perdure.CDeserializer
-import Database.Perdure.WordArrayRef
+import Database.Perdure.WordArrayRef()
 import Database.Perdure.WordNArrayRef
 import Control.Applicative
 import Data.Word
@@ -34,7 +34,6 @@ import Control.Concurrent.MVar
 import Control.Exception.Base
 import qualified Data.Cache.LRU as LRU
 import Data.Dynamic
-import Debug.Trace
 
 class Deref r where
   derefIO :: r a -> IO a

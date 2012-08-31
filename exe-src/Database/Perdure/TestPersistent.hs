@@ -24,42 +24,23 @@ module Database.Perdure.TestPersistent (
 
 import Prelude()
 import Cgm.Prelude
-import Control.Exception
-import Control.DeepSeq
+import Cgm.Control.Monad.State
+import Cgm.Control.Profile
+import Cgm.Data.Array
+import Cgm.Data.Either
+import Cgm.Data.Nat
+import Cgm.Data.Super
+import Cgm.Data.Typeable
+import Cgm.Data.WordN
+import Control.Monad.Error
 import Data.Ix
 import Data.Word
-import Data.Functor.Identity
+import Database.Perdure
+import Database.Perdure.Internal
+import Database.Perdure.TestState
 import Test.QuickCheck
 import Test.QuickCheck.Property
-import Database.Perdure.State
-import Database.Perdure.SizeRef
-import Database.Perdure.RNF
-import Database.Perdure.ReplicatedFile
-import Cgm.Control.Combinators
-import Database.Perdure.Count(Address)
-import Cgm.System.Endian
-import Debug.Trace
-import Cgm.Control.Profile
-import qualified Control.Monad.State.Strict as Std
-import Cgm.Control.Monad.State
-import Cgm.Data.Either
-import Control.Monad.Error
 import qualified Database.Perdure.Data.Map as PMap
-import Database.Perdure.Ref
-import Cgm.Data.Super
-import Database.Perdure.RNF
-import Database.Perdure.CSerializer
-import Database.Perdure.CDeserializer
-import Database.Perdure.RNF
-import Cgm.Data.Nat
-import Cgm.Data.WordN
-import Database.Perdure.Data.MapMultiset
-import Database.Perdure.SpaceTree
-import Control.Monad.Random
-import Control.Concurrent.MVar
-import Cgm.Data.Typeable
-import Database.Perdure.TestState
-import Database.Perdure
 
 -- | We test with some type of tree with variable arity and nodes of various sizes.
 data TestTree a = Leaf a | Node [a] [SRef (TestTree a)] deriving (Show, Eq, Typeable)
@@ -78,16 +59,10 @@ instance (Persistent a, Typeable a, Arbitrary a) => Arbitrary (TestTree a) where
 -- | We establish a default persister for TestTree, which will simply persist it according to the internal structure.
 instance (Persistent a, Typeable a) => Persistent (TestTree a) where persister = structureMap persister
 
-testInitState :: (Typeable a, Persistent a) => ReplicatedFile -> a -> IO (PState a)
-testInitState f a = fmap defaultRootLocation (newCachedFile 1000 f) >>= \l -> 
-  initState l
-  (addSpan (sortedPair (2 * apply super (getLen rootAllocSize)) $ 100 * 1000000) emptySpace)
-  a
-
 writeReadTestFile :: (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
 writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
   putCpuTime "Data creation" $ evaluate $ prnf persister a
-  putCpuTime "Write time" $
+  putCpuTime "Write time" $ (() <$) $
     newCachedFile 1000 f >>=
     createPVar a (mega 100) . defaultRootLocation
   putCpuTime "Read time" $
@@ -97,14 +72,14 @@ writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $
 
 
 testPersistent  :: a -> IO ()
-testPersistent args = quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $
+testPersistent _ = quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $
                       writeReadTestFile (generateTestTree 15 :: TestTree Word32) "testPersistent.dag"
 
 testPersistentMap  :: a -> IO ()
-testPersistentMap args = quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $
+testPersistentMap _ = quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $
                          writeReadTestFile (foldl' (\z n -> PMap.insert n n z) PMap.empty [(1 :: Integer) .. 10000])  "testPersistentMap.dag"
 
-propPersister :: forall a p. (Show a, Eq a) => Persister a -> a -> Property
+propPersister :: forall a. (Show a, Eq a) => Persister a -> a -> Property
 propPersister p a = morallyDubiousIOProperty $ return $ (== a) $ 
                     deserializeFromFullArray (unsafeSeqDeserializer p) $ fullArrayRange $ (id :: Id (PrimArray Pinned Word64)) $ serializeToArray p a
 
@@ -115,7 +90,7 @@ myCheck :: Testable p => Int -> p -> IO ()
 myCheck n = quickCheckWith (Args Nothing n n n True)
 
 testSeqPersistent :: a -> IO ()
-testSeqPersistent args = do
+testSeqPersistent _ = do
   myCheck 5 $ propPersistent . (id :: Id Bool)
   myCheck 50 $ propPersistent . (id :: Id Word8)
   myCheck 50 $ propPersistent . (id :: Id (Word8, Word8))

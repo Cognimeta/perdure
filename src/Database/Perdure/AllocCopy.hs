@@ -45,5 +45,5 @@ instance AllocCopy Word where
   -- Starts writing after the specified length 'skip', which can later be used to write a header.
   allocCopyBitsSkip skip start end = do
     wBuf <- mkArray $ coarsenLen (addedBits end start) + skip
-    copyBits end start (aligned $ CWordSeq wBuf skip) >>= padIncompleteWord
+    _ <- copyBits end start (aligned $ CWordSeq wBuf skip) >>= padIncompleteWord
     return wBuf

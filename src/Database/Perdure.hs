@@ -15,8 +15,18 @@ or implied. See the License for the specific language governing permissions and 
 
 module Database.Perdure(
   module Database.Perdure.Persistent,
-  defaultRootLocation,
+  module Database.Perdure.Ref,
+  module Database.Perdure.Deref,
+  module Database.Perdure.Rev,
+  module Database.Perdure.SizeRef,
+  LocalStoreFile,
+  withRawDeviceStoreFiles,
+  withRawDeviceStoreFile,
+  withFileStoreFile,
+  ReplicatedFile(..),
   newCachedFile,
+  RootLocation,
+  defaultRootLocation,
   PVar,
   openPVar,
   createPVar,
@@ -28,15 +38,19 @@ import Prelude()
 import Cgm.Prelude
 import Database.Perdure.State
 import Database.Perdure.Persistent
+import Database.Perdure.Ref
+import Database.Perdure.Deref
+import Database.Perdure.Rev
+import Database.Perdure.SizeRef
 import Cgm.Control.Monad.State as M
 import Cgm.Data.Typeable
-import Control.Monad hiding (sequence)
-import Control.Monad.Trans
 import Control.Monad.Reader hiding (sequence)
-import Control.Applicative
 import Cgm.Control.Concurrent.MVar
 import Cgm.Data.Super
+import Cgm.Data.Len
 import Data.Word
+import Database.Perdure.ReplicatedFile(ReplicatedFile(..))
+import Database.Perdure.LocalStoreFile(withFileStoreFile, withRawDeviceStoreFile, withRawDeviceStoreFiles, LocalStoreFile)
 
 -- | Wraps a ReplicatedFile with cache of a given size (number of dereferenced DRefs)
 newCachedFile :: Integer -> ReplicatedFile -> IO CachedFile

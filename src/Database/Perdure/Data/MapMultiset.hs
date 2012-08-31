@@ -20,15 +20,12 @@ module Database.Perdure.Data.MapMultiset(
 
 import Prelude()
 import Cgm.Prelude
-import Cgm.Data.Maybe
 import Cgm.Data.Multiset
 import Database.Perdure.Persistent
 import Cgm.Control.Monad.State
 import Database.Perdure.Data.Map(Map)
 import qualified Database.Perdure.Data.Map as Map
 import Data.Dynamic
-import Cgm.Data.Typeable
-import Database.Perdure.Package
 
 newtype MapMultiset a = MapMultiset {mapMultisetMap :: Map a Integer} deriving Typeable
 

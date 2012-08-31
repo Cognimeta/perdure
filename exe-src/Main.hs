@@ -17,21 +17,12 @@ module Main (
   main
 ) where
 
-import Data.Int
-import Data.Word
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString as B
-import qualified Test.QuickCheck as QC
-import Test.QuickCheck.Arbitrary
 import System.Environment
-import Language.Haskell.TH
 import Database.Perdure.TestState
 import Database.Perdure.TestPersistent
 import Database.Perdure.TestStoreFile
 import Database.Perdure.TestMap
 import Cgm.TH.Label
-
-import Cgm.Control.Profile
 
 main :: IO ()
 main = getArgs >>= argsMain

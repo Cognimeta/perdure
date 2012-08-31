@@ -39,19 +39,15 @@ module Database.Perdure.WriteBits (
   module Cgm.Data.Array
   ) where
 
-import Debug.Trace
 import Foreign.Ptr
-import Data.Bits
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Identity
 import Foreign.Storable
-import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
 import Cgm.Data.Array
 import Cgm.Data.Word
 import Cgm.Data.Len
-import Cgm.Data.WordN
+import Cgm.Data.WordN hiding (d0)
 import Cgm.System.Mem.Alloc
 import Cgm.Control.Combinators
 
@@ -92,13 +88,17 @@ instance BitSrc (Ptr Word) where
   copyBits = copyWords
 instance WordSrc (Ptr Word) where
   addedWords = (apply unsigned <$>) ./ minusPtrLen
-  copyWords end start d = if end == start then return d else ioToST (peek start) >>= \w -> addWord w d >>= copyWords end (start `advancePtrLen` 1)
+  copyWords end start d =
+    if end == start
+    then return d
+    else ioToST (peek start) >>= \w -> addWord w d >>= copyWords end (start `advancePtrLen` (1 :: Len Word Integer))
   copyWordsPartial end start dropLow = 
     let len = addedWords end start 
     in if len == 0
        then undefined 
        else (\d -> ioToST (peek start) >>= \w -> 
-              addBits (refineLen word - dropLow) (w `partialShiftRL` getLen dropLow) d) >=> copyWords end (start `advancePtrLen` 1)
+              addBits (refineLen word - dropLow) (w `partialShiftRL` getLen dropLow) d) >=>
+            copyWords end (start `advancePtrLen` (1 :: Len Word Integer))
 
 ------------------------- WordSeq -------------------------
 
@@ -134,9 +134,11 @@ instance WordSrc (WordSeq s f) where
   copyWordsPartial (WordSeq (s1, r1) c1) start@(WordSeq (s0, _) c0) =
     if s1 == s0
     then copyWordsPartial c1 c0
-    else \drop -> copyWordsPartial (WordSeq (s1 - chunkSize, tail r1) $ chunkEnd (head r1)) start drop >=> copyWords c1 (chunkStart c1)
+    else \drp -> copyWordsPartial (WordSeq (s1 - chunkSize, tail r1) $ chunkEnd (head r1)) start drp >=> copyWords c1 (chunkStart c1)
  
-chunkStart (CWordSeq a i) = CWordSeq a 0
+chunkStart :: CWordSeq s f -> CWordSeq s f
+chunkStart (CWordSeq a _) = CWordSeq a 0
+chunkEnd :: STPrimArray s f Word -> CWordSeq s f
 chunkEnd a = CWordSeq a chunkSize
   
 ------------------------- CWordSeq -------------------------

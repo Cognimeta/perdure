@@ -18,12 +18,7 @@ module Database.Perdure.CRef (
   onCRef
   ) where
 
-import Control.Concurrent
-import Control.Applicative
-import System.IO.Unsafe
-import Cgm.Control.Combinators
 import Data.Dynamic
-import Cgm.Data.Typeable
 import Database.Perdure.Package
 
 

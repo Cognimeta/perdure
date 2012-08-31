@@ -17,23 +17,17 @@ module Database.Perdure.RNF (
   prnf
   ) where
 
-import Control.Applicative
-import System.IO.Unsafe
-import Cgm.Data.Word
 import Cgm.Data.WordN
-import Cgm.Control.InFunctor
-import Cgm.Control.Combinators
 import Database.Perdure.Persistent
 --import Database.Perdure.SoftRef
 --import Database.Perdure.WriteRef
-import Database.Perdure.CRef
 
 prnf :: Persister a -> a -> ()
 prnf p = case p of
-  PartialWordPersister n -> (`seq` ())
+  PartialWordPersister _ -> (`seq` ())
   PairPersister pa pb -> \(a, b) -> prnf pa a `seq` prnf pb b
   EitherPersister pa pb -> either (prnf pa) (prnf pb)
   ViewPersister i pb -> prnf pb . apply i
-  SummationPersister pi _ s -> s (\i pb _ b -> prnf pi i `seq` prnf pb b)
+  SummationPersister pi' _ s -> s (\i pb _ b -> prnf pi' i `seq` prnf pb b)
   DRefPersister' -> (`seq` ())  -- Do not load, the persisted reference is already fully evaluated
   CRefPersister' _ pra -> onCRef (prnf pra) (prnf persister)

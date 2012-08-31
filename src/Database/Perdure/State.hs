@@ -43,13 +43,6 @@ import Control.Concurrent
 import qualified Cgm.Control.Monad.State as M
 import Control.Monad.State hiding (sequence)
 import Control.Monad.Reader hiding (sequence)
-import Control.Applicative
-import Foreign.Marshal.Alloc
-import Foreign.Marshal.Array
-import Data.Ord
-import Data.Functor.Constant
-import Data.Functor.Identity
-import Cgm.System.Mem.Alloc
 import Cgm.Data.Word
 import Cgm.Data.Len
 import Cgm.Data.List
@@ -58,22 +51,14 @@ import Database.Perdure.CSerializer
 import Database.Perdure.Decrementer
 import Database.Perdure.Incrementer
 import Database.Perdure.RootValidator
-import Database.Perdure.SizeRef
 import Database.Perdure.Space
 import Database.Perdure.SpaceTree
-import Database.Perdure.Count
 import Database.Perdure.Data.MapMultiset
 import Cgm.System.Endian
-import Cgm.Control.Combinators
-import Cgm.Control.Concurrent.MVar
-import Cgm.Control.Concurrent.Await
-import Cgm.Data.Monoid
-import Control.Arrow
 import Cgm.Data.Multiset as MS
-import Debug.Trace
 import Database.Perdure.Ref
+import Database.Perdure.Deref
 import Database.Perdure.SpaceBook
-import Database.Perdure.Package
 import Cgm.Data.Typeable
 import qualified Data.Cache.LRU as LRU
 import Cgm.Data.Maybe
@@ -82,9 +67,6 @@ import Database.Perdure.AllocCopy
 import Cgm.Data.Super
 import Database.Perdure.Allocator
 import Database.Perdure.Rev
-
-moduleName :: String
-moduleName = "Database.Perdure.State"
 
 data CachedFile = CachedFile ReplicatedFile (MVar Cache)
 
@@ -227,16 +209,16 @@ writeRoot i (RootLocation (CachedFile f _) roots) done writer = do
   start <- stToIO mkABitSeq
   (result, end) <- runStateT writer start
   {-# SCC "barrier" #-} storeFileFullBarrier f -- If the following write completes, we want to assume that all preceeding writes completed
-  arr <- allocCopyBits start end
-  onWordConv (writeRoot' (apply wordConv1 arr :: PrimArray Pinned Word32)) (writeRoot' (apply wordConv1 arr :: PrimArray Pinned Word64))
+  ar <- allocCopyBits start end
+  onWordConv (writeRoot' (apply wordConv1 ar :: PrimArray Pinned Word32)) (writeRoot' (apply wordConv1 ar :: PrimArray Pinned Word64))
   -- We would like a full barrier here, to make sure reads do not move before matching writes, there is one just before,
   -- and the precedeeing write is protected by the following sync (and will never be read)
   {-# SCC "sync" #-} storeFileSync f done -- We need to know when the transaction has become durable
   -- No barrier here, however that does not help much since we have a barrier before the preceeding write
   return result where
     writeRoot' :: forall w. (LgMultiple Word64 w, ValidationDigestWord w) => PrimArray Pinned w -> IO ()
-    writeRoot' arr = {-# SCC "writeRoot" #-} do
-      let (RootValidator, bufs) = mkValidationInput arr
+    writeRoot' a = {-# SCC "writeRoot" #-} do
+      let (RootValidator, bufs) = mkValidationInput a
       when (sum (arrayLen <$> bufs) > apply super (refineLen rootAllocSize :: Len w Word32)) $ error "Root too large."
       () <$ storeFileWrite f (getRootAddress $ genericIndex roots $ mod i $ fromIntegral $ length roots) platformWordEndianness bufs
 
@@ -251,7 +233,7 @@ write (CachedFile f c) ls a' = {-# SCC "serialize" #-} StateT $ \s -> do
   lv <- newMVar ls
   cSer persister (c, StateAllocator f lv, Just cd) (\a'' s' -> readMVar lv >>= \ls' -> readMVar cd >>= \u -> return ((a'', u, ls'), s')) a' s
 
-readRoot :: forall a d f. (Persistent a, Typeable a) => CachedFile -> RootAddress -> IO (Maybe (RootVersions a))
+readRoot :: forall a. (Persistent a, Typeable a) => CachedFile -> RootAddress -> IO (Maybe (RootVersions a))
 readRoot (CachedFile f c) rootAddr =
   fmap (deserializeFromFullArray $ apply cDeser persister $ DeserializerContext f c) <$> 
   foldM (\result next -> maybe next (return . Just) result) Nothing readRootDataWE where
@@ -268,10 +250,10 @@ data StateAllocator a = StateAllocator ReplicatedFile (MVar a)
 instance Space a => Allocator (StateAllocator a) where
   allocatorStoreFile (StateAllocator f _) = f
   alloc (StateAllocator _ var) len = modifyMVar var $ \a -> do
-    let span = requireSpan a
-    let a' = removeSpan span a
-    --putStrLn $ "Alloc " ++ show size ++ "@" ++ show (onSortedPair const span) ++ "  => free: " ++ (show a') --findSpan 0 a'
-    return (a', onSortedPair (\start end -> unsafeLen start) span) where
+    let spn = requireSpan a
+    let a' = removeSpan spn a
+    --putStrLn $ "Alloc " ++ show size ++ "@" ++ show (onSortedPair const spn) ++ "  => free: " ++ (show a') --findSpan 0 a'
+    return (a', onSortedPair (\start _ -> unsafeLen start) spn) where
       requireSpan = onSortedPair (\start _ -> unsafeSortedPair start (start + getLen len)) . 
                     fromMaybe (error "Out of storage space") . listHead . 
                     findSpan (getLen len)

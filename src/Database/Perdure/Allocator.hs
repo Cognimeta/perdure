@@ -29,8 +29,6 @@ import Database.Perdure.StoreFile
 import Database.Perdure.LocalStoreFile
 import Database.Perdure.SingleStoreFile
 import Database.Perdure.ReplicatedFile
-import Cgm.Data.Len
-import Cgm.Data.Array
 import Cgm.Data.Super
 import Cgm.System.Endian
   

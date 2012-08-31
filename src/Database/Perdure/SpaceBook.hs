@@ -18,20 +18,11 @@ module Database.Perdure.SpaceBook(
   ) where
 
 import Prelude ()
-import Cgm.Prelude
 import Cgm.Data.Structured
-import Control.Monad.State
 import Database.Perdure.Persistent
-import Database.Perdure.Space
 import Database.Perdure.SpaceTree
 import Database.Perdure.Count
 import Database.Perdure.Data.MapMultiset
-import Database.Perdure.CSerializer(Address)
-import Cgm.Data.Monoid
-import Database.Perdure.ReplicatedFile
-import Debug.Trace
-import Cgm.Data.Super
-import Database.Perdure.Package
 import Cgm.Data.Typeable
 
 data SpaceBook = SpaceBook {

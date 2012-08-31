@@ -15,8 +15,6 @@ module Database.Perdure.Count (
   Address
   ) where
 
-import Prelude()
-import Cgm.Prelude
 import Data.Word
 import Cgm.Data.Len
 

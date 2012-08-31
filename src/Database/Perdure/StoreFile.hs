@@ -29,7 +29,6 @@ module Database.Perdure.StoreFile (
 import Prelude ()
 import Cgm.Prelude
 import Data.Word
-import Data.ByteString
 import Foreign.Ptr
 import Cgm.Data.Len
 import Cgm.Data.Super

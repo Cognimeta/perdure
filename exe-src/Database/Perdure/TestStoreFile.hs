@@ -18,21 +18,16 @@ module Database.Perdure.TestStoreFile (
   ) where
 
 import Data.Word
-import Foreign.Ptr
-import Foreign.Marshal.Array
-import Database.Perdure.StoreFile
-import Database.Perdure.LocalStoreFile
-import Database.Perdure.SingleStoreFile
-import Cgm.Data.Word
+import Database.Perdure
+import Database.Perdure.Internal
 import Cgm.Data.Either
-import Cgm.Data.Len
-import Cgm.Data.Array
 import Cgm.System.Endian
 import Control.Exception
 import Control.Monad.Error
+import Control.Applicative
 
 testStoreFile :: [String] -> IO ()
-testStoreFile args = fmap fromRight $ runErrorT $ withFileStoreFile "testStoreFile.dag" $ (. SingleStoreFile) $
+testStoreFile _ = fmap fromRight $ runErrorT $ withFileStoreFile "testStoreFile.dag" $ (. (ReplicatedFile . pure)) $
     \f -> do
       let a :: PrimArray Pinned Word32 = mkArrayWith 130000 $ fromIntegral . getLen
       r <- storeFileWrite f 0 platformWordEndianness [a]

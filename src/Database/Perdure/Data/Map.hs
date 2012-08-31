@@ -38,18 +38,17 @@ import Cgm.Control.Monad.State
 import Database.Perdure.Persistent
 import Database.Perdure.SizeRef
 import Control.Arrow
-import Control.Monad
 import Data.Tuple
 import Data.Functor
 import Data.List(foldl')
 import Data.Lens
 import Cgm.Data.Nat
 import Database.Perdure.Ref
+import Database.Perdure.Deref
 import Cgm.Data.Maybe
 import Control.Comonad.Trans.Store
 import Data.Dynamic
 import Database.Perdure.Package
-import Cgm.Data.Typeable
 
 type R = CRef (SizeRef D9)
 
@@ -107,19 +106,19 @@ appState a ab = viewState (const a, ab)
 updateM :: forall k a b. Ord k => k -> State (Maybe a) b -> State (Map k a) b
 updateM k s = get >>= \p -> case p of
   Empty -> appState Nothing (maybe Empty $ NonEmpty . LastLevel . Upper k . Leaf) s
-  r@(NonEmpty t) -> (\(c, b) -> onModify (return b) ((b <$) . put) c) $ case t of
+  (NonEmpty t') -> (\(c, b) -> onModify (return b) ((b <$) . put) c) $ case t' of
     LastLevel ua -> first (fmap $ either NonEmpty (\Empt -> Empty)) $ trans' k s ua
     NextLevel t -> first (fmap $ NonEmpty . either NextLevel id) $ updateT t where
       updateT :: Tr t => Tree (Reference (Node t)) k a -> (Modify (Either (Tree (Reference (Node t)) k a) (Tree t k a)), b)
       updateT (LastLevel ua) = first (fmap $ either Left (Right . LastLevel)) $ trans' k s ua
-      updateT (NextLevel t) = first (fmap $ Left . either NextLevel id) $ updateT t
+      updateT (NextLevel t'') = first (fmap $ Left . either NextLevel id) $ updateT t''
     
 trans' :: (Tr t, Ord k) => k -> State (Maybe a) b -> Upper t k a -> (Modify (Either (Tree t k a) (G t k a)), b)
-trans' k s a = first (fmap $ \o -> case o of 
+trans' k s = first (fmap $ \o -> case o of 
                   Merge a -> Right a
                   Single a -> Left $ LastLevel a
                   Split a0 a1 -> Left $ NextLevel $ LastLevel $ mapUpper reference $ node2 a0 a1
-              ) $ trans k s a
+              ) . trans k s
 
 data Modify a = Leave | Change !a deriving Functor
 onModify :: z -> (a -> z) -> Modify a -> z
@@ -200,7 +199,7 @@ instance Tr t => Tr (Node t) where
 scan :: forall k a z. (k -> a -> z) -> (k -> z -> z -> z) -> Map k a -> Maybe z
 scan kaz kzzz m = case m of 
   Empty -> Nothing  
-  NonEmpty tr -> Just $ s1 tr $ \(Upper k (Leaf a)) -> kaz k a where
+  NonEmpty t -> Just $ s1 t $ \(Upper k (Leaf a)) -> kaz k a where
     s1 :: Tree t k a -> (Upper t k a -> z) -> z
     s1 tr utz = case tr of
       LastLevel ut -> utz ut
@@ -233,16 +232,16 @@ foldlWithKey f z m = case m of
   Empty -> z
   NonEmpty t -> foldlf z t where
     foldlf :: Tr t => z -> Tree t k a -> z
-    foldlf z (LastLevel t) = foldlK f z t
-    foldlf z (NextLevel t) = foldlf z t
+    foldlf zz (LastLevel tt) = foldlK f zz tt
+    foldlf zz (NextLevel tt) = foldlf zz tt
 
 foldrWithKey :: forall z k a. (k -> a -> z -> z) -> z -> Map k a -> z
 foldrWithKey f z m = case m of
   Empty -> z
   NonEmpty t -> foldrf z t where
     foldrf :: Tr t => z -> Tree t k a -> z
-    foldrf z (LastLevel t) = foldrK f z t
-    foldrf z (NextLevel t) = foldrf z t
+    foldrf zz (LastLevel tt) = foldrK f zz tt
+    foldrf zz (NextLevel tt) = foldrf zz tt
 
 fromList :: Ord k => [(k, a)] -> Map k a
 fromList = foldl' (\z (k, a) -> insert k a z) empty
@@ -269,7 +268,7 @@ maxKey :: Map k a -> Maybe k
 maxKey Empty = Nothing
 maxKey (NonEmpty t) = Just $ maxKeyT t where
   maxKeyT :: Tree t k a -> k
-  maxKeyT (NextLevel t) = maxKeyT t
+  maxKeyT (NextLevel t') = maxKeyT t'
   maxKeyT (LastLevel (Upper k _)) = k
 
 

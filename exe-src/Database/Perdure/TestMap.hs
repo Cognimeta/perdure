@@ -24,7 +24,7 @@ testMap :: [String] -> IO ()
 testMap _ = 
   (quickCheckWith (Args Nothing n n n True) $ insertList [1 .. k] empty == insertList (reverse [1 .. k]) empty) >> 
   (quickCheckWith (Args Nothing n n n True) $ deleteList [1 .. k] (insertList (reverse [1 .. k]) $ insertList [1 .. k] empty) == empty) where
-  insertList l m = foldl' (\z n -> insert n n z) m l
-  deleteList l m = foldl' (\z n -> delete n z) m l
+  insertList l m = foldl' (\z v -> insert v v z) m l
+  deleteList l m = foldl' (flip delete) m l
   n = 5
   k = n * 10000

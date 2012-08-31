@@ -27,35 +27,29 @@ module Database.Perdure.CDeserializer (
 
 import Prelude ()
 import Cgm.Prelude
-import Data.Functor.Compose
-import Control.Concurrent
 import Database.Perdure.Persistent
+import Database.Perdure.StoreFile
 import Database.Perdure.CRef
-import Cgm.Data.Functor
-import Cgm.Data.Array
 import Cgm.Data.Word
-import Cgm.Data.Len
 import Data.Bits
-import Foreign.Ptr
-import Database.Perdure.ReplicatedFile
-import System.IO.Unsafe
 
 -- TODO figure out why the Deserializer's Allocator df is free to differ from f. Why is it a type argument of Deserializer at all if it can be anything?
 
 -- TODO consider reimplementing as in CSerializer (no Serializer layer, and possibly with continuations) and check performance
 
 deserializeFromArray :: (Allocation f, Allocation df, Deserializable w) => Deserializer df a -> ArrayRange (PrimArray f w) -> DeserOut a
-deserializeFromArray d = (\(ArrayRange arr start _) -> deserialize d (refineLen start) arr) . deserInput
+deserializeFromArray d = (\(ArrayRange ar start _) -> deserialize d (refineLen start) ar) . deserInput
 
 deserializeFromFullArray :: forall f df w a. (Allocation f, Allocation df, Deserializable w, LgMultiple w Bool, Prim w) => 
                             Deserializer df a -> ArrayRange (PrimArray f w) -> a
-deserializeFromFullArray d arr = case deserializeFromArray d arr of
-  DeserOut a end -> bool (error $ "Inconsistent deserialized size: " ++ show (end, refineLen $ arrayLen arr :: Len Bool Word)) a $ 
-             (coarsenLen end :: Len w Word) == arrayLen arr
+deserializeFromFullArray d ar = case deserializeFromArray d ar of
+  DeserOut a end -> bool (error $ "Inconsistent deserialized size: " ++ show (end, refineLen $ arrayLen ar :: Len Bool Word)) a $ 
+             (coarsenLen end :: Len w Word) == arrayLen ar
 
 -- | The passed persister must have no references
 unsafeSeqDeserializer :: Persister a -> Deserializer Free a
-unsafeSeqDeserializer p = cDeser p (DeserializerContext (error "seqDeserializer has no file" :: ReplicatedFile) (error "seqDeserializer has no cache"))
+unsafeSeqDeserializer p =
+  cDeser p (DeserializerContext (error "seqDeserializer has no file" :: ReplicatedFile) (error "seqDeserializer has no cache"))
 
 cDeser :: Persister a -> DeserializerContext -> Deserializer Free a
 cDeser p = case p of
@@ -63,7 +57,7 @@ cDeser p = case p of
   PairPersister pa pb -> liftA2 (liftA2 (,)) (cDeser pa) (cDeser pb)
   EitherPersister pa pb -> \dc -> cDeser persister dc >>= bool (Left <$> cDeser pa dc) (Right <$> cDeser pb dc)
   ViewPersister i pb -> flip functorIacomap i . cDeser pb
-  SummationPersister pi d _ -> \dc -> cDeser pi dc >>= d (\pb ba -> fmap ba $ cDeser pb dc)
+  SummationPersister pi' d _ -> \dc -> cDeser pi' dc >>= d (\pb ba -> fmap ba $ cDeser pb dc)
   DRefPersister' -> \dc -> DRef persister dc <$> cDeser persister dc 
   CRefPersister' _ pra -> fmap Refed . cDeser pra
   
@@ -72,7 +66,7 @@ instance InjectionACofunctor (Deserializer f) where
   iacomap = functorIacomap
 
 bitDeserializer :: Deserializer f Word
-bitDeserializer = Deserializer $ \bit arr -> DeserOut (let (wIx, bIx) = coarseRem bit in (indexArray arr wIx `partialShiftRL` getLen bIx) .&. 1) (bit + 1)
+bitDeserializer = Deserializer $ \b ar -> DeserOut (let (wIx, bIx) = coarseRem b in (indexArray ar wIx `partialShiftRL` getLen bIx) .&. 1) (b + 1)
 
 -- 0 <= n <= wordBits
 partialWordDeserializer :: Len Bool Word -> Deserializer f Word
@@ -80,16 +74,17 @@ partialWordDeserializer n
   | n == 0 = pure 0
   | n == 1 = bitDeserializer
   | otherwise =
-    Deserializer $ \bit arr -> 
+    Deserializer $ \b ar -> 
     DeserOut (
-      let (wIx, bIx) = coarseRem bit 
+      let (wIx, bIx) = coarseRem b
           avail = wordBits - bIx
           overflow = n - avail
           n' = wordBits - n
-      in bool (indexArray arr wIx `partialShiftL` getLen (n' - bIx) `partialShiftRL` getLen n') 
-         ((indexArray arr wIx `partialShiftRL` getLen bIx) + (indexArray arr (wIx + 1) `partialShiftL` getLen (wordBits - overflow) `partialShiftRL` getLen n')) $ 
+      in bool (indexArray ar wIx `partialShiftL` getLen (n' - bIx) `partialShiftRL` getLen n') 
+         ((indexArray ar wIx `partialShiftRL` getLen bIx) +
+          (indexArray ar (wIx + 1) `partialShiftL` getLen (wordBits - overflow) `partialShiftRL` getLen n')) $ 
          (signed $* getLen overflow) > 0)
-    (bit + n)
+    (b + n)
 
 ---------------------------------------------------------------------------
 
@@ -127,18 +122,15 @@ instance Functor (Deserializer f) where
 --    point x = ... inlined into pure
 instance Applicative (Deserializer f) where
   {-# INLINE pure #-}
-  pure x = Deserializer $ \bit _ -> DeserOut x bit
+  pure x = Deserializer $ \b _ -> DeserOut x b
   {-# INLINE (<*>) #-}
-  g <*> x = Deserializer $ \bit ptr -> case deserialize g bit ptr of DeserOut g' bit' -> deserialize (g' <$> x) bit' ptr
+  g <*> x = Deserializer $ \b ptr -> case deserialize g b ptr of DeserOut g' b' -> deserialize (g' <$> x) b' ptr
     -- we could define <*> = ap, but we would like to see if we could use <*> in the definition of join instead, see reflexion below
 instance Monad (Deserializer f) where
   {-# INLINE return #-}
   return = pure
   {-# INLINE (>>=) #-}
-  (>>=) = fmap join . flip fmap where
-    {-# INLINE join #-}
-    join :: Deserializer f (Deserializer f a) -> Deserializer f a
-    join d2 = Deserializer $ \bit ptr -> case deserialize d2 bit ptr of DeserOut d bit' -> deserialize d bit' ptr
-
-getBitDeserializer :: Deserializer f (Len Bool Word)
-getBitDeserializer = Deserializer $ \bit _ -> DeserOut bit bit
+  (>>=) = fmap join' . flip fmap where
+    {-# INLINE join' #-}
+    join' :: Deserializer f (Deserializer f a) -> Deserializer f a
+    join' d2 = Deserializer $ \b ptr -> case deserialize d2 b ptr of DeserOut d b' -> deserialize d b' ptr

@@ -23,8 +23,6 @@ import Cgm.Data.Len
 import Database.Perdure.Persistent
 import Cgm.Data.Functor.Sum
 import Database.Perdure.DRef
-import Database.Perdure.Allocator
-import Database.Perdure.StoreFile
 import Cgm.Data.Nat
 import Data.Dynamic
 

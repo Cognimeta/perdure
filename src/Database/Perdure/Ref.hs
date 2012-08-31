@@ -15,13 +15,10 @@ or implied. See the License for the specific language governing permissions and 
 module Database.Perdure.Ref (
   Ref(..),
   ref,
-  refLens,
-  module Database.Perdure.Deref,
+  refLens
   ) where
 
 import System.IO.Unsafe
-import Cgm.Data.Functor.Sum
-import Cgm.Control.Combinators
 import Database.Perdure.Deref
 import Data.Lens
 import Database.Perdure.Persistent

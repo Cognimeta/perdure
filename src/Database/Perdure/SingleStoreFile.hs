@@ -19,7 +19,6 @@ module Database.Perdure.SingleStoreFile (
        
 import Database.Perdure.StoreFile
 import Database.Perdure.LocalStoreFile
-import Cgm.Data.Word
 
 
 newtype SingleStoreFile a = SingleStoreFile a deriving SyncableStoreFile

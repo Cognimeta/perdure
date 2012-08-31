@@ -25,7 +25,6 @@ module Database.Perdure.Rev(
   ) where
 
 import Database.Perdure.Persistent
-import Database.Perdure.Ref
 import Cgm.Data.Tagged
 import Data.Lens
 import Data.Typeable
@@ -61,7 +60,7 @@ class Rev a => PersistentRev a where
   serRev :: (forall b. Integer -> Persister b -> (b -> a) -> b -> z) -> a -> z
 instance PersistentRev NoRev where  
   deserRev _ _ = error "bad index when deserializing Rev"
-  serRev f = onNoRev
+  serRev _ = onNoRev
 instance (Persistent b, PersistentRev r) => PersistentRev (b :> r) where
   deserRev f i = if i == (at :: At (b :> r)) lastRev then f persister Current else deserRev ((. (Previous .)) . f) i
   serRev f = onRev (f ((at :: At (b :> r)) lastRev) persister Current) (serRev $ ((. (Previous .)) .) . f)

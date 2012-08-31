@@ -20,21 +20,11 @@ module Database.Perdure.RootValidator (
   ) where
 
 import Data.Word
-import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Lazy as Lazy
-import qualified Data.Binary as Binary
-import Crypto.Hash.Tiger
-import Foreign.Marshal.Alloc
-import Foreign.Marshal.Array
-import System.IO.Unsafe
 import Database.Perdure.Digest
 import Cgm.Data.Maybe
 import Cgm.Data.Len
 import Database.Perdure.Validator
 import Database.Perdure.CSerializer
-import Database.Perdure.CDeserializer
-import Cgm.Control.Concurrent.Await
-import Cgm.Control.Combinators
 import Database.Perdure.AllocCopy
 
 -- ValidationDigest assiciates a particular digest method to each word type to digest (Word32 and Word64)
@@ -56,13 +46,13 @@ instance ValidationDigestWord Word64 where
   digest' = digest
 
 data RootValidator w = RootValidator deriving (Eq, Show)
-type Header w = (Len w Word, ValidationDigest w)
+type Header w = (Len w Word64, ValidationDigest w)
 instance (ValidationDigestWord w, Show (ValidationDigest w)) => Validator (RootValidator w) where
   type ValidatedElem (RootValidator w) = w
-  mkValidationInput b = (RootValidator, [serializeToArray persister ((arrayLen b, digest' b) :: Header w), b])
+  mkValidationInput b = (RootValidator, [serializeToArray persister ((fmap fromIntegral $ arrayLen b, digest' b) :: Header w), b])
   validate RootValidator b = 
     let DeserOut ((len, h) :: Header w) u = deserializeFromArray (unsafeSeqDeserializer persister) b
-        payload = headArrayRange len $ skipArrayRange (coarsenLen u) b
+        payload = headArrayRange (fmap fromIntegral len) $ skipArrayRange (coarsenLen u) b
     in payload `justIf` (digest' payload == h)
 
 instance Persistent (RootValidator w) where persister = structureMap persister

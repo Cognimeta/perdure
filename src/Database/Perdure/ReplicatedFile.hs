@@ -21,8 +21,8 @@ import Control.Applicative
 import Database.Perdure.StoreFile
 import Database.Perdure.LocalStoreFile
 import Cgm.Control.Concurrent.NotificationCount
-import Cgm.Data.Word
 
+-- | A list of 'LocalStoreFile' to be used as replicates. We write to all replicates and read from the first one that reports no error.
 newtype ReplicatedFile = ReplicatedFile [LocalStoreFile]
 
 instance StoreFile ReplicatedFile where

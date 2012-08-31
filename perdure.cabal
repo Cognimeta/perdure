@@ -1,5 +1,5 @@
 Name: perdure
-version: 0.1.2
+version: 0.2.0
 cabal-version: >= 1.8
 build-type: Simple
 license: OtherLicense
@@ -11,7 +11,7 @@ package-url:
 bug-reports:
 synopsis: Robust persistence for acyclic immutable data
 description: 
-	     Perdure™, a Cognimeta product, aims to provide a simple and robust persistence mechanism for acyclic
+	     Perdure(TM), a Cognimeta product, aims to provide a simple and robust persistence mechanism for acyclic
 	     immutable data with an easily comprehensible cost-model. It persists to raw block devices.
 	     .
 	     For some classes of applications, it can replace the use of traditional DMBS and keep the data modelled in
@@ -28,7 +28,7 @@ description:
 	     threshold is reached, and inlines the data otherwise. As a convenience, a Map type is also provided which
 	     uses SizeRef on internal tree nodes. It can grow beyond the memory size and still remain efficient for
 	     lookups and traversals. Other persistent data structures with similar properties can be built on top of
-	     Perdure™.
+	     Perdure.
 	     .
 	     For the user application, dereferencing is a pure computation. This is similar to lazy loading, but the
 	     reference data types do not hold ordinary references to their referent, only their location. This allows
@@ -118,15 +118,15 @@ description:
 	     * Documentation and examples are not sufficient and should be our first focus. For a minimal example,
 	     look at Database.Perdure.TestState.testStatesF in exe-src.
 	     .
-	     Given those limitations, Perdure™ is not applicable for very large scale projects at the moment. But it can
+	     Given those limitations, Perdure is not applicable for very large scale projects at the moment. But it can
 	     be ideal for smaller projects where there is no point in burdening the developer with a distinct data
 	     model. It can also be used as a temporary solution before integrating to external databases.
 	     .
-	     Cognimeta's Iota Charts web application <https://iotacharts.com>, is based on Perdure™ and has been has
+	     Cognimeta's Iota Charts web application <https://iotacharts.com>, is based on Perdure and has been has
 	     been live for close to a year. Its database is relatively small at ~80MB currently, but we have been very
 	     pleased with the results.
 	     .
-	     Perdure™ has been developed by Cognimeta Inc. over the past two years. We are releasing this as open
+	     Perdure has been developed by Cognimeta Inc. over the past two years. We are releasing this as open
 	     source under the permissive Apache license 2.0. The persistence mechanism is relatively simple and concise
 	     and its open source nature can provide the inquisitive user with added confidence about the security of its
 	     data.  Also Cognimeta has been using Haskell exclusively, and has benefited from many
@@ -150,46 +150,47 @@ library
   extensions: CPP
   exposed-modules:
     Database.Perdure
-    Database.Perdure.AllocCopy
-    Database.Perdure.Allocator
-    Database.Perdure.ArrayRef
-    Database.Perdure.CDeserializer
-    Database.Perdure.CRef
-    Database.Perdure.CSerializer
-    Database.Perdure.Count
-    Database.Perdure.DRef
     Database.Perdure.Data.Map
-    Database.Perdure.Data.MapMultiset
-    Database.Perdure.Decrementer
     Database.Perdure.Deref
     Database.Perdure.History
+    Database.Perdure.Internal
+    Database.Perdure.Persistent
+    Database.Perdure.Ref
+    Database.Perdure.Rev
+    Database.Perdure.SizeRef
+  other-modules:        
+    Database.Perdure.Allocator
+    Database.Perdure.AllocCopy
+    Database.Perdure.ArrayRef
+    Database.Perdure.Count
+    Database.Perdure.CSerializer
+    Database.Perdure.CDeserializer
+    Database.Perdure.CRef
+    Database.Perdure.Data.MapMultiset
+    Database.Perdure.Decrementer
+    Database.Perdure.Digest
+    Database.Perdure.DRef
     Database.Perdure.Incrementer
     Database.Perdure.LocalStoreFile
     Database.Perdure.Package
-    Database.Perdure.Persistent
-    Database.Perdure.RNF
-    Database.Perdure.Ref
     Database.Perdure.ReplicatedFile
-    Database.Perdure.Rev
+    Database.Perdure.RNF
     Database.Perdure.RootValidator
     Database.Perdure.SingleStoreFile
-    Database.Perdure.SizeRef
+    Database.Perdure.StoreFile
     Database.Perdure.Space
     Database.Perdure.SpaceBook
     Database.Perdure.SpaceTree
     Database.Perdure.State
-    Database.Perdure.StoreFile
     Database.Perdure.Validator
-    Database.Perdure.WValidator
+    Database.Perdure.WriteBits
     Database.Perdure.WordArrayRef
     Database.Perdure.WordNArrayRef
-    Database.Perdure.WriteBits
-  other-modules:        
-    Database.Perdure.Digest
+    Database.Perdure.WValidator
   build-depends:
     base >= 4.5.0.0 && < 5,
     template-haskell >= 2.7.0.0,
-    cognimeta-utils == 0.1.0,
+    cognimeta-utils == 0.1.1,
     QuickCheck >=2.4.0.1,
     strict >= 0.3.2,
     mtl >= 2.1.2,
@@ -217,7 +218,7 @@ library
     deepseq >= 1.3.0.0,
     deepseq-th >= 0.1.0.3
 
-  ghc-options: -rtsopts -fcontext-stack=80 -O2 -funfolding-use-threshold=24 -pgmP cpphs -optP --cpp
+  ghc-options: -rtsopts -Wall -fno-warn-orphans -fcontext-stack=80 -O2 -funfolding-use-threshold=24 -pgmP cpphs -optP --cpp
   extensions: 
 
 source-repository head
@@ -235,13 +236,15 @@ executable perdure
   build-depends:
     base >= 4.5.0.0,
     template-haskell >= 2.7.0.0,
-    cognimeta-utils == 0.1.0,
+    cognimeta-utils == 0.1.1,
     mtl >= 2.1.2,
     deepseq,
     QuickCheck >=2.4.0.1,
-    perdure >= 0.1.2,
+    perdure >= 0.2.0,
     transformers >= 0.3.0.0,
     bytestring >= 0.9.2.1,
     containers >= 0.4.2.1,
     MonadRandom == 0.1.3
-  ghc-options: -rtsopts -fcontext-stack=80 -fno-warn-duplicate-exports -O2 -funfolding-use-threshold=24 -threaded
+  ghc-options: -rtsopts -Wall -fcontext-stack=80 -fno-warn-duplicate-exports -O2 -funfolding-use-threshold=24 -threaded
+
+-- We are not using the unicode (TM) symbol because of http://trac.haskell.org/haddock/ticket/210

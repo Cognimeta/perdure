@@ -17,45 +17,20 @@ module Database.Perdure.TestState (
   testStates,
   testStatesDag,
   testStatesDestroysRaw1,
-  SRef(..),
+  SRef,
   mega
   ) where
 
 import Prelude()
 import Cgm.Prelude
-import Control.Exception
-import Control.DeepSeq
-import Data.Ix
 import Data.Word
-import Data.Functor.Identity
 import Test.QuickCheck
 import Test.QuickCheck.Property
-import Database.Perdure.State
-import Database.Perdure.SizeRef
-import Database.Perdure.RNF
-import Database.Perdure.ReplicatedFile
-import Cgm.Control.Combinators
-import Database.Perdure.Count(Address)
-import Cgm.System.Endian
-import Debug.Trace
-import Cgm.Control.Profile
-import qualified Control.Monad.State.Strict as Std
 import Cgm.Control.Monad.State
-import Cgm.Data.Either
 import Control.Monad.Error hiding (sequence_)
-import qualified Database.Perdure.Data.Map as PMap
-import Database.Perdure.Ref
 import Cgm.Data.Super
-import Database.Perdure.RNF
-import Database.Perdure.CSerializer
-import Database.Perdure.CDeserializer
-import Database.Perdure.RNF
 import Cgm.Data.Nat
-import Cgm.Data.WordN
-import Database.Perdure.Data.MapMultiset
-import Database.Perdure.SpaceTree
 import Control.Monad.Random
-import Control.Concurrent.MVar
 import Cgm.Data.Typeable
 import Database.Perdure
 
@@ -120,7 +95,7 @@ testStatesDag _ =
   withReplicatedFiles "testStatesDag" $ \f -> 
   newCachedFile 1000 f >>=
   createPVar (Dag $ ref []) (mega 100) . defaultRootLocation >>= \v ->
-  for_ [0 .. 1999] $ \c -> do
+  for_ [(0 :: Int) .. 1999] $ \c -> do
     print c
     updatePVar v $ StateT $ fmap (((),) . Just) . evalRandIO . dagBuild
 

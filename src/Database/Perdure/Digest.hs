@@ -28,7 +28,6 @@ import Cgm.Data.Array
 import Cgm.System.Endian
 import System.IO.Unsafe
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as Lazy
 import qualified Crypto.Hash.MD5 as MD5
 import qualified Crypto.Hash.Skein512 as Skein512
 import Cgm.Data.Structured

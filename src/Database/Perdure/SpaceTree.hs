@@ -25,7 +25,6 @@ import Cgm.Control.Monad.State
 import Database.Perdure.Space
 import Database.Perdure.Data.Map
 import Database.Perdure.Persistent
-import Debug.Trace
 import Data.Typeable
 
 newtype SpaceTree = SpaceTree (Map Word64 Bool) deriving Typeable
@@ -37,7 +36,7 @@ instance Space SpaceTree where
     let
       start = 0 -- TODO pass that in as a parameter
       mkSpans [] = []
-      mkSpans (k : []) = error "bad SpaceTree"
+      mkSpans (_ : []) = error "bad SpaceTree"
       mkSpans (k0 : k1 : ks) = unsafeSortedPair k0 k1 : mkSpans ks
     in mkSpans $
        (\(b, ks) -> bool (start : ks) ks b) $ -- When bool is false, prepend 'start' (consider that the span possibly overlapping 'start' actually starts at 'start')

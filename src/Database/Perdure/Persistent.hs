@@ -41,7 +41,6 @@ module Database.Perdure.Persistent (
   lenPersister,
   summationPersister,
   ratioPersister,  
-  wordPersister,
   maybePersister,
   shortcutPersister,
   (>.),
@@ -57,8 +56,6 @@ module Database.Perdure.Persistent (
   Ref0(..),
   CDRef,
   Cache,
-  module Database.Perdure.StoreFile,
-  module Database.Perdure.LocalStoreFile,
   module Cgm.Data.Structured
 ) where
 
@@ -66,16 +63,13 @@ import Prelude ()
 import Cgm.Prelude
 import Data.Word
 import Data.Int
-import System.IO.Unsafe
 import Cgm.Data.WordN
 import Cgm.Data.Word
 import Cgm.Data.Len
 import Cgm.Data.Structured
 import Cgm.Data.Functor.Sum
-import Database.Perdure.LocalStoreFile
 --import Database.Perdure.SoftRef
 import Data.Ratio
-import Data.Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Time.Calendar
@@ -85,19 +79,15 @@ import Database.Perdure.Validator
 import Database.Perdure.WValidator
 import Database.Perdure.StoreFile
 import Database.Perdure.ReplicatedFile
-import Database.Perdure.Allocator
 import Cgm.System.Endian
-import Data.Ord
 import Data.Char
 import Data.Binary.IEEE754
 import Cgm.Data.List
-import Data.Ratio
 import Data.Bits
 import Database.Perdure.CRef
 import Data.Cache.LRU
 import Data.Dynamic
 import Control.Concurrent.MVar
-import Cgm.Data.Typeable
 
 data WordNArrayRef v (r :: * -> *) = WordNArrayRef !v !(r (ValidatedElem v)) !Endianness
 
@@ -164,8 +154,6 @@ instance RefPersistent r => RefPersistent (IRef r) where refPersister = IRefPers
 
 class Persistent1_ (r :: * -> *) where persister1_ :: Persister (r a)
                                                        
-class Persistent2_ (r :: * -> * -> *) where persister2_ :: Persistent f => Persister (r f a)
-
 class Persistent1 r where persister1 :: (Typeable a, Persistent a) => Persister (r a)
 instance Persistent1 Ref0 where persister1 = structureMap persister
 instance Persistent1 DRef where persister1 = DRefPersister'
@@ -199,9 +187,11 @@ instance (Persistent a1, Persistent a2, Persistent a3, Persistent a4, Persistent
 instance (Persistent a1, Persistent a2, Persistent a3, Persistent a4, Persistent a5, Persistent a6) => Persistent (a1,a2,a3,a4,a5,a6) where 
   persister = structureMap persister
 instance Persistent Ordering where persister = structureMap persister
+{-                                   
 instance Persistent Word where 
   {-# INLINE persister #-}
   persister = wordPersister
+-}
 instance Persistent Word8 where 
   {-# INLINE persister #-}
   persister = unsafeBitsPersister
@@ -214,7 +204,9 @@ instance Persistent Word32 where
 instance Persistent Word64 where 
   {-# INLINE persister #-}
   persister = onWordConv (persister `iacomap` splitWord64LE) (wordPersister `iacomap` inv wordConv)
+{-                                   
 instance Persistent Int where persister = persister `iacomap` unsigned
+-}
 instance Persistent Int8 where persister = persister `iacomap` unsigned
 instance Persistent Int16 where persister = persister `iacomap` unsigned
 instance Persistent Int32 where persister = persister `iacomap` unsigned
@@ -264,26 +256,30 @@ instance (Persistent (r32 r), Persistent (r64 r)) => Persistent (WordArrayRef r3
   persister = structureMap $ persister |. persister
 
 {-# INLINE listPersister #-}  
+-- | Persister for lists built from a specified element persister.
 listPersister :: List a => Persister (Listed a) -> Persister a
 listPersister elemPersister = (maybePersister $ elemPersister &. listPersister elemPersister) `iacomap` listStructure
 
--- Takes persisters for 2 types, and an injection from the smaller type 'a' to the larger type 'b', and gives a persister for the larger type which uses
--- the smaller type representation when possible, plus one bit to identify which representation is used.
+-- | Takes persisters for 2 types, and an injection from the smaller type 'a' to the larger type 'b', and gives a
+-- persister for the larger type which uses the smaller type representation when possible, plus one bit to identify
+-- which representation is used.
 shortcutPersister :: InjectionM i => i a b -> Persister b -> Persister a -> Persister b
 shortcutPersister i b a = (b |. a) `iacomap` eitherI where
   eitherI = uncheckedInjection (\x -> ($ x) $ maybe (Left x) Right . unapply i) (either id $ apply i)
 
--- Specialization of shortcutPersister with the 'super' injection.
+-- | Specialization of shortcutPersister with the 'super' injection.
 infixl 9 >.
 (>.) :: Super a b => Persister b -> Persister a -> Persister b
 (>.) = shortcutPersister super
 
+-- | Persister for 'Maybe a' built from a specified 'a' persister. Uses a single bit to represent 'Nothing'.
 maybePersister :: Persister a -> Persister (Maybe a)
 maybePersister elemPersister = structureMap $ persister |. elemPersister
 
-bitPersister :: Persister Word -- Do not export to user
-bitPersister = PartialWordPersister 1
-wordPersister :: Persister Word
+--bitPersister :: Persister Word -- Do not export to user
+--bitPersister = PartialWordPersister 1
+
+wordPersister :: Persister Word -- Do not export to user, Word is platform dependent
 wordPersister = PartialWordPersister wordBits
 
 -- prefer wordPersister when writing a full word

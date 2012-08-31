@@ -21,7 +21,6 @@ module Database.Perdure.Validator (
 
 import Prelude ()
 import Cgm.Prelude
-import Cgm.Data.Word
 import Cgm.Data.Array
 
 -- Although most hash functions are defined on strings of byte as a convention, they often start by converting the plaintext to strings

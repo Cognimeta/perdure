@@ -25,36 +25,24 @@ module Database.Perdure.CSerializer (
 import Prelude ()
 import Cgm.Prelude
 
-import Data.Functor.Compose
 import Control.Concurrent
-import Control.Monad.State
 import GHC.Base hiding ((.), id)
 import GHC.IO hiding (liftIO)
-import GHC.Exts
 import Cgm.Data.Functor.Sum
-import Cgm.Data.Either
 import Cgm.Data.Word
-import Cgm.Data.Len
 import Cgm.Control.Concurrent.NotificationCount
-import Cgm.Control.Combinators
 import Database.Perdure.CDeserializer
 import Database.Perdure.Count
 import Cgm.Data.Multiset as MS
-import Data.IORef
-import System.IO.Unsafe
 import Database.Perdure.AllocCopy
-import Foreign.Ptr
 import Cgm.Data.Maybe
-import Database.Perdure.ReplicatedFile
 import Database.Perdure.Allocator
 import Database.Perdure.ArrayRef
-import Database.Perdure.WordArrayRef
-import Database.Perdure.WordNArrayRef
-import Database.Perdure.Persistent
+import Database.Perdure.WordArrayRef()
+import Database.Perdure.WordNArrayRef()
 import Cgm.Data.MapMultiset
 import qualified Data.Cache.LRU as LRU
 import Data.Dynamic
-import Debug.Trace
 
 
 -- Important : We must not read (deref) a ref that has just been written in the current writeState.
@@ -81,7 +69,7 @@ cSer !p !sc !k !a !d = case p of
   PairPersister pb pc -> case a of (b, c) -> cSer pb sc (\b' -> cSer pc sc (\c' -> k (b', c')) c) b d
   EitherPersister pb pc -> either (\b -> stToIO (addBit 0 d) >>= cSer pb sc (k . Left) b) (\c -> stToIO (addBit 1 d) >>= cSer pc sc (k . Right) c) a
   ViewPersister i pb -> cSer pb sc (k . fromJust . unapply i) (apply i a) d
-  SummationPersister pi _ s -> s (\i pb ba b -> cSer pi sc (const $ cSer pb sc (k . ba) b) i d) a -- i' is ignored, i type should not contain CRefs
+  SummationPersister pi' _ s -> s (\i pb ba b -> cSer pi' sc (const $ cSer pb sc (k . ba) b) i d) a -- i' is ignored, i type should not contain CRefs
   DRefPersister' -> case a of (DRef _ _ w) -> 
                                 case sc of (_, _, c) -> addCount (arrayRefAddr w) c >> 
                                                         cSer persister sc (const $ k a) w d -- TODO verify if call to persister is wastful
@@ -117,11 +105,11 @@ cSerRef !rp !sc !k !a !d = case rp of
   IRefPersister pb -> cSerRef pb sc (k . IRef) a d
   
 noCount :: SerializerContext l c -> SerializerContext l c
-noCount (cache, l, c) = (cache, l, Nothing)
+noCount (cache, l, _) = (cache, l, Nothing)
 
 mkDRef :: (Allocator l, BitSrc s, SrcDestState s ~ RealWorld, Typeable a) => 
           SerializerContext l c -> Persister a -> Maybe a -> s -> s -> IO (DRef a)
-mkDRef sc@(cache, l, _) p ma = writeDRef p ma (DeserializerContext (allocatorStoreFile l) cache) l
+mkDRef (cache, l, _) p ma = writeDRef p ma (DeserializerContext (allocatorStoreFile l) cache) l
 
 writeDRef :: (Allocator l, BitSrc s, SrcDestState s ~ RealWorld, Typeable a) => 
              Persister a -> Maybe a -> DeserializerContext -> l -> s -> s -> IO (DRef a)

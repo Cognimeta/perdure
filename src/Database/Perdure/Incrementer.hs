@@ -20,17 +20,14 @@ module Database.Perdure.Incrementer (
 import Prelude ()
 import Cgm.Prelude
 import Cgm.Data.Structured
-import Control.Monad.State
+import Cgm.Data.Word
+import Cgm.Data.Len
 import Database.Perdure.Persistent
 import Database.Perdure.Space
-import Database.Perdure.Count
-import Database.Perdure.CSerializer(Address)
-import Cgm.Data.Monoid
-import Database.Perdure.ReplicatedFile
 import Cgm.Data.Multiset as MS
-import Debug.Trace
 import Database.Perdure.SpaceBook
-import Database.Perdure.Ref
+import Database.Perdure.Deref
+import Database.Perdure.StoreFile
 
 -- While Decrementer should be used on allocated values (not in s, and may have a count in c), Incrementer is used
 -- on values which have already been written, but we use older values of s and c for which the value to increment
@@ -38,11 +35,11 @@ import Database.Perdure.Ref
 
 incr :: Persister a -> a -> SpaceBook -> SpaceBook
 incr !p !a !s = case p of
-  PartialWordPersister n -> s
+  PartialWordPersister _ -> s
   PairPersister pb pc -> case a of (b, c) -> incr pc c $ incr pb b s
   EitherPersister pb pc -> either (incr pb) (incr pc) a s
   ViewPersister i pb -> incr pb (apply i a) s
-  SummationPersister pi _ f -> f (\i pb _ b -> incr pb b $ incr pi i s) a
+  SummationPersister pi' _ f -> f (\i pb _ b -> incr pb b $ incr pi' i s) a
   DRefPersister' -> case a of (DRef _ _ warr) -> 
                                 let referenced = incr persister $ deref a
                                 in either (\(WordNArrayRef _ r _) -> incrRef r referenced) (\(WordNArrayRef _ r _) -> incrRef r referenced) (unwrap warr) s
