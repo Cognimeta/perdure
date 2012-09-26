@@ -28,7 +28,6 @@ module Database.Perdure.State(
   --asyncCollectState,
   collectState,
   collectStateM,
-  emptyCache,
   module Database.Perdure.Space,
   module Database.Perdure.Persistent,
   CachedFile(..),
@@ -60,7 +59,6 @@ import Database.Perdure.Ref
 import Database.Perdure.Deref
 import Database.Perdure.SpaceBook
 import Cgm.Data.Typeable
-import qualified Data.Cache.LRU as LRU
 import Cgm.Data.Maybe
 import Database.Perdure.WriteBits
 import Database.Perdure.AllocCopy
@@ -134,11 +132,6 @@ readState :: (Persistent a, Typeable a) => RootLocation -> IO (Maybe (PState a))
 readState l@(RootLocation f rootAddrs) = 
   fmap (\r -> let rs = rootScan $ toOnlyRev r in PState l (bookSpace $ incr persister rs $ deref $ rootCS rs) r) . 
   maybeMaximumBy (comparing $ rootId . toOnlyRev) . catMaybes <$> sequence (readRoot f <$> rootAddrs)
-
--- | Create an empty cache of the specified size (number of dereferenced DRefs).
--- Note that eventually we would like a cache with a size measured in bytes, for a better prediction of memory consumption.
-emptyCache :: Integer -> Cache
-emptyCache sz = LRU.fromList (Just sz) []
 
 -- | We reserve the option of growing roots to 1MB, so use this as a minimum distance between the various RootAddress in RootLocation
 rootAllocSize :: Len Word64 Word32

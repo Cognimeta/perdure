@@ -39,4 +39,5 @@ instance WordNValidator v => ArrayRef (WordNArrayRef v) where
     return $ WordNArrayRef v r platformWordEndianness
   derefArrayRef f (WordNArrayRef v r e) = fmap primArrayMatchAllocation <$> await1 (storeFileRead f r e v)
   arrayRefAddr (WordNArrayRef _ r _) = refStart r
+  arrayRefSize (WordNArrayRef _ r _) = coarsenLen $ fmap fromIntegral $ refSize r
 

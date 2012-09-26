@@ -40,9 +40,10 @@ import Database.Perdure.Allocator
 import Database.Perdure.ArrayRef
 import Database.Perdure.WordArrayRef()
 import Database.Perdure.WordNArrayRef()
+import qualified Database.Perdure.Cache as Cache
 import Cgm.Data.MapMultiset
-import qualified Data.Cache.LRU as LRU
 import Data.Dynamic
+import Control.Monad.Random
 
 
 -- Important : We must not read (deref) a ref that has just been written in the current writeState.
@@ -116,14 +117,15 @@ writeDRef :: (Allocator l, BitSrc s, SrcDestState s ~ RealWorld, Typeable a) =>
 writeDRef p ma dc@(DeserializerContext _ c) l start end = 
   DRef p dc <$> maybe id (\a -> (>>= \w -> w <$ addToCache a w)) ma (allocCopyBits start end >>= writeArrayRef l) where
   addToCache a w = let addr = arrayRefAddr w in modifyMVar_ c $ 
-                                                return . {-(trace ("writing/adding to cache at" ++ show addr) $ -}LRU.insert addr (toDyn a)
+                                                evalRandIO . {-(trace ("writing/adding to cache at" ++ show addr) $ -}
+                                                Cache.insert addr (Cache.Entry (toDyn a) $ arrayRefSize w)
   
 -- | The passed Persister must hace no references
 {-# NOINLINE serializeToArray #-}
 serializeToArray :: AllocCopy w => Persister a -> a -> PrimArray Pinned w
 serializeToArray p a = unsafePerformIO $ do
   start <- stToIO mkABitSeq 
-  noCache <- newMVar $ LRU.fromList Nothing []
+  noCache <- newMVar $ Cache.empty 0
   cSer p (noCache, NoAllocator, Nothing :: CountDest MapMultiset) (const $ allocCopyBits start) a start
                              
 data NoAllocator = NoAllocator

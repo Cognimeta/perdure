@@ -42,6 +42,7 @@ import Database.Perdure.Ref
 import Database.Perdure.Deref
 import Database.Perdure.Rev
 import Database.Perdure.SizeRef
+import qualified Database.Perdure.Cache as Cache
 import Cgm.Control.Monad.State as M
 import Cgm.Data.Typeable
 import Control.Monad.Reader hiding (sequence)
@@ -52,9 +53,11 @@ import Data.Word
 import Database.Perdure.ReplicatedFile(ReplicatedFile(..))
 import Database.Perdure.LocalStoreFile(withFileStoreFile, withRawDeviceStoreFile, withRawDeviceStoreFiles, LocalStoreFile)
 
--- | Wraps a ReplicatedFile with cache of a given size (number of dereferenced DRefs)
+-- | Wraps a ReplicatedFile with a cache of a given size. The size is specified in bytes of serialized data, but the actual consumed
+-- size may be a few times larger since the cache contains the deserialized data, which is often less compact than its serialized
+-- representation.
 newCachedFile :: Integer -> ReplicatedFile -> IO CachedFile
-newCachedFile sz f = CachedFile f <$> newMVar (emptyCache sz)
+newCachedFile sz f = CachedFile f <$> newMVar (Cache.empty sz)
 
 -- | At the moment this is the only way to create a rootLocation.
 -- The root of the database will be located in one of two reserved locations at the start of the specified files.

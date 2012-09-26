@@ -25,7 +25,7 @@ import Database.Perdure.Space
 import Cgm.Data.Multiset as MS
 import Database.Perdure.SpaceBook
 import Database.Perdure.Deref
-import qualified Data.Cache.LRU as LRU
+import qualified Database.Perdure.Cache as Cache
 import Database.Perdure.ArrayRef
 import Control.Concurrent.MVar
 import System.IO.Unsafe
@@ -47,7 +47,7 @@ decr !p !a !s = case p of
 
 {-# NOINLINE unsafeClearCache #-}
 unsafeClearCache :: MVar Cache -> Len Word64 Word64 -> ()
-unsafeClearCache c addr = unsafePerformIO $ modifyMVar_  c $ return . fst . LRU.delete addr
+unsafeClearCache c addr = unsafePerformIO $ modifyMVar_  c $ return . Cache.delete addr
 
 decrRef :: forall w. LgMultiple Word64 w => 
            BasicRef w -> (SpaceBook -> SpaceBook) -> SpaceBook -> SpaceBook

@@ -48,7 +48,7 @@ testStates _ =
 
 testStatesF :: ReplicatedFile -> IO ()
 testStatesF f =
-    newCachedFile 1000 f >>=
+    newCachedFile 1000000 f >>=
     createPVar (EmptyRList :: RList Word32) (mega 100) . defaultRootLocation >>= \v ->
     for_ [0 .. 19] $ \c -> do
       print c
@@ -93,7 +93,7 @@ testStatesDag  :: a -> IO ()
 testStatesDag _ =
   quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runErrorT $ (True <$) $
   withReplicatedFiles "testStatesDag" $ \f -> 
-  newCachedFile 1000 f >>=
+  newCachedFile 1000000 f >>=
   createPVar (Dag $ ref []) (mega 100) . defaultRootLocation >>= \v ->
   for_ [(0 :: Int) .. 1999] $ \c -> do
     print c

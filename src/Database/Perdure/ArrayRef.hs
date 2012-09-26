@@ -25,4 +25,5 @@ class ArrayRef (r :: (* -> *) -> *) where
   writeArrayRef :: (Allocator l) => l -> PrimArray Pinned (ArrayRefElem r) -> IO (r (StoreRef ReplicatedFile))
   derefArrayRef :: (StoreFile f, Allocation fr) => f -> r (StoreRef f) -> IO (Maybe (ArrayRange (PrimArray fr (ArrayRefElem r))))
   arrayRefAddr ::  r BasicRef -> Len Word64 Word64
+  arrayRefSize ::  r BasicRef -> Len Word64 Word64
   

@@ -63,10 +63,10 @@ writeReadTestFile :: (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
 writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
   putCpuTime "Data creation" $ evaluate $ prnf persister a
   putCpuTime "Write time" $ (() <$) $
-    newCachedFile 1000 f >>=
+    newCachedFile 1000000 f >>=
     createPVar a (mega 100) . defaultRootLocation
   putCpuTime "Read time" $
-    newCachedFile 1000 f >>=
+    newCachedFile 1000000 f >>=
     fmap (fromMaybe $ error "Read error") . openPVar . defaultRootLocation >>= \v ->
     updatePVar v $ get >>= liftIO . evaluate . (a ==)
 

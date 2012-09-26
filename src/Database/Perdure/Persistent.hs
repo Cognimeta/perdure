@@ -79,13 +79,13 @@ import Database.Perdure.Validator
 import Database.Perdure.WValidator
 import Database.Perdure.StoreFile
 import Database.Perdure.ReplicatedFile
+import Database.Perdure.Cache(Cache)
 import Cgm.System.Endian
 import Data.Char
 import Data.Binary.IEEE754
 import Cgm.Data.List
 import Data.Bits
 import Database.Perdure.CRef
-import Data.Cache.LRU
 import Data.Dynamic
 import Control.Concurrent.MVar
 
@@ -94,8 +94,6 @@ data WordNArrayRef v (r :: * -> *) = WordNArrayRef !v !(r (ValidatedElem v)) !En
 data WordArrayRef r32 r64 (r :: * -> *) = Word32ArrayRef !(r32 r) | Word64ArrayRef !(r64 r)
 
 type WArrayRef = WordArrayRef (WordNArrayRef W32Validator) (WordNArrayRef W64Validator)
-
-type Cache = LRU (Len Word64 Word64) Dynamic
 
 data DeserializerContext = forall f. (StoreFile f, StoreRef f ~ BasicRef) => DeserializerContext {dcFile :: f, dcCache :: MVar Cache}
 

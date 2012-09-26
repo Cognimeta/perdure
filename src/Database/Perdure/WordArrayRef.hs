@@ -36,6 +36,8 @@ instance (ArrayRef r32, ArrayRef r64, ArrayRefElem r32 ~ Word32, ArrayRefElem r6
   derefArrayRef f (Word64ArrayRef r) = fmap deserInput <$> derefPinnedArrayRef f r
   arrayRefAddr (Word32ArrayRef r) = arrayRefAddr r
   arrayRefAddr (Word64ArrayRef r) = arrayRefAddr r
+  arrayRefSize (Word32ArrayRef r) = arrayRefSize r
+  arrayRefSize (Word64ArrayRef r) = arrayRefSize r
 
 derefPinnedArrayRef :: (ArrayRef r, StoreFile f) => f -> r (StoreRef f) -> IO (Maybe (ArrayRange (PrimArray Pinned (ArrayRefElem r))))
 derefPinnedArrayRef = derefArrayRef
