@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE TypeFamilies, RankNTypes, EmptyDataDecls, DeriveDataTypeable, TypeOperators, FlexibleContexts, UndecidableInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, RankNTypes, EmptyDataDecls, DeriveDataTypeable, TypeOperators, FlexibleContexts, UndecidableInstances, ScopedTypeVariables, TemplateHaskell #-}
 
 module Database.Perdure.Rev(
   (:>)(..),
@@ -21,11 +21,18 @@ module Database.Perdure.Rev(
   toCurrent,
   toOnlyRev,
   revPersister,
-  latestLens
+  latestLens,
+  Rev,
+  Revs,
+  HasPrev(..),
+  revLens,
+  unrev,
+  rev
   ) where
 
+import Prelude()
+import Cgm.Prelude
 import Database.Perdure.Persistent
-import Cgm.Data.Tagged
 import Data.Lens
 import Data.Typeable
 
@@ -51,11 +58,11 @@ toOnlyRev = toCurrent onNoRev
 toCurrent :: (b -> a) -> (a :> b) -> a
 toCurrent = onRev id
 
-class Rev a where lastRev :: Tagged a Integer
-instance Rev NoRev where lastRev = tag (-1)
-instance Rev b => Rev (a :> b) where lastRev = tag $ (at :: At b) lastRev +  1
+class LastRev a where lastRev :: Tagged a Integer
+instance LastRev NoRev where lastRev = tag (-1)
+instance LastRev b => LastRev (a :> b) where lastRev = tag $ (at :: At b) lastRev +  1
 
-class Rev a => PersistentRev a where
+class LastRev a => PersistentRev a where
   deserRev :: (forall b. Persister b -> (b -> a) -> z) -> Integer -> z
   serRev :: (forall b. Integer -> Persister b -> (b -> a) -> b -> z) -> a -> z
 instance PersistentRev NoRev where  
@@ -78,3 +85,25 @@ instance PersistentRev (b :> r) => Persistent (b :> r) where persister = revPers
 -- for a semantically equivalent value.                                                             
 latestLens :: (b -> a) -> Lens (a :> b) a
 latestLens toLatest = lens (toCurrent toLatest) (const . Current)
+
+-------------------------------------
+-- Below we intoduce a typeclass. It simplifies usage, but only works when types have unique predecessors
+
+class HasPrev a where
+  type Prev a
+  fromPrev :: Prev a -> a
+
+type Revs a = a :> Prev a
+
+newtype Rev a = Rev (Revs a) deriving Typeable
+deriveStructured ''Rev
+instance (HasPrev a, PersistentRev (a :> Prev a)) => Persistent (Rev a) where persister = structureMap revPersister
+
+revLens :: HasPrev a => Lens (Rev a) a
+revLens = latestLens fromPrev . iso (\(Rev a)->a) Rev
+
+unrev :: HasPrev a => Rev a -> a
+unrev (Rev a) = toCurrent fromPrev a
+
+rev :: a -> Rev a
+rev = Rev . Current

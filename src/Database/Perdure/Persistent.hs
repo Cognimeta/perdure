@@ -88,6 +88,8 @@ import Data.Bits
 import Database.Perdure.CRef
 import Data.Dynamic
 import Control.Concurrent.MVar
+import Data.Functor.Identity
+import qualified Data.ByteString as S
 
 data WordNArrayRef v (r :: * -> *) = WordNArrayRef !v !(r (ValidatedElem v)) !Endianness
 
@@ -252,6 +254,10 @@ instance (Persistent v, LgPersistent1_ r, LgMultiple Word64 (ValidatedElem v)) =
   persister = structureMap $ persister &. lgPersister1_ &. (structureMap persister)
 instance (Persistent (r32 r), Persistent (r64 r)) => Persistent (WordArrayRef r32 r64 r) where 
   persister = structureMap $ persister |. persister
+instance Persistent a => Persistent (Identity a) where persister = persister `iacomap` uncheckedBijection runIdentity Identity
+-- We inject into Either [Word8] ToBeDefined, so we can support an efficient encoding later on
+instance Persistent S.ByteString where
+  persister = persister `iacomap` (uncheckedInjection (Left . S.unpack) (either S.pack (error "Invalid ByteString" :: () -> S.ByteString)))
 
 {-# INLINE listPersister #-}  
 -- | Persister for lists built from a specified element persister.
