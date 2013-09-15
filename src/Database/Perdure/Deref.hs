@@ -35,6 +35,7 @@ import Control.Exception.Base
 import qualified Database.Perdure.Cache as Cache
 import Data.Dynamic
 import Control.Monad.Random
+import Debug.Trace
 
 class Deref r where
   derefIO :: r a -> IO a
@@ -49,11 +50,11 @@ derefEq = (==) `dot2i` deref
 instance Deref DRef where 
   derefIO (DRef p dc@(DeserializerContext f cv) aRef) = 
     let addr = arrayRefAddr aRef
-    in {-trace ("(looking up cache at" ++ show addr ++ " wanting an " ++ show (typeOf r))-}
+    in trace ("looking up cache at" ++ show addr)
      modifyMVar cv (\c -> return $ (maybe (c, Nothing) $ \(e, c') -> (c', Just $ Cache.entryValue e)) $ Cache.lookup addr c) >>= 
      maybe 
      ((>>= \a -> evaluate a >>
-                 (a <$ modifyMVar_ cv (evalRandIO . {-trace ("adding to cache at" ++ show addr) $-}
+                 (a <$ modifyMVar_ cv (evalRandIO . trace ("adding to cache at" ++ show addr) .
                                        Cache.insert addr (Cache.Entry (toDyn a) $ arrayRefSize aRef)))) $
       fmap (maybe (error "Read error") $ deserializeFromFullArray (cDeser p dc) . (id :: Id (ArrayRange (PrimArray Free Word)))) $
       derefArrayRef f aRef)
