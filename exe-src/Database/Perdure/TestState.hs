@@ -16,7 +16,6 @@ or implied. See the License for the specific language governing permissions and 
 module Database.Perdure.TestState (
   testStates,
   testStatesDag,
-  testStatesDestroysRaw1,
   SRef,
   mega
   ) where
@@ -59,12 +58,6 @@ withReplicatedFiles n z = ErrorT $ fmap join $
                          runErrorT $ withFileStoreFile (n ++ "0.dag") $ \f0 ->
                          runErrorT $ withFileStoreFile (n ++ "1.dag") $ \f1 ->
                          z $ ReplicatedFile [f0, f1]
-
--- | Here we perform the test on a (single) raw device
-testStatesDestroysRaw1  :: a -> IO ()
-testStatesDestroysRaw1 _ =
-  quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runErrorT $ (True <$) $
-  withRawDeviceStoreFile "/dev/raw/raw1" $ (. (ReplicatedFile . pure)) $ testStatesF
 
 ----------
 

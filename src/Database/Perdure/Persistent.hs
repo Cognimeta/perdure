@@ -26,7 +26,8 @@ or implied. See the License for the specific language governing permissions and 
   TypeFamilies, 
   UndecidableInstances, 
   DeriveFunctor, 
-  DeriveDataTypeable #-}
+  DeriveDataTypeable,
+  RoleAnnotations #-}
 
 module Database.Perdure.Persistent (
   Persister(..),

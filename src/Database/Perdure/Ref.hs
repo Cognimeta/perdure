@@ -20,7 +20,7 @@ module Database.Perdure.Ref (
 
 import System.IO.Unsafe
 import Database.Perdure.Deref
-import Data.Lens
+import Control.Lens
 import Database.Perdure.Persistent
 import Control.Applicative
 
@@ -31,8 +31,8 @@ class Deref r => Ref r where
 ref :: Ref r => a -> r a
 ref = unsafePerformIO . refIO
 
-refLens :: Ref r => Lens (r a) a
-refLens = lens deref $ const . ref
+refLens :: Ref r => Lens' (r a) a
+refLens = lens deref $ const ref
 
 instance Ref r => Ref (IRef r) where refIO = (IRef <$>) . refIO
 instance Ref Ref0 where refIO = return . Ref0

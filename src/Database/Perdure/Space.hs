@@ -13,9 +13,9 @@ or implied. See the License for the specific language governing permissions and 
 
 module Database.Perdure.Space (
   Space(..),
-  Span,
   module Cgm.Data.SortedPair,
-  module Data.Monoid
+  module Data.Monoid,
+  Span
   ) where
 
 import Prelude()
@@ -23,8 +23,7 @@ import Cgm.Prelude
 import Data.Monoid
 import Data.Word
 import Cgm.Data.SortedPair
-
-type Span = SortedPair Word64
+import Database.Perdure.StoreFile(Span)
 
 -- Users must ensure they do not add overlapping spans, or remove spans unless all of its contents has already been added (perhaps as seperate spans)
 class Space a where

@@ -50,7 +50,7 @@ derefEq = (==) `dot2i` deref
 instance Deref DRef where 
   derefIO (DRef p dc@(DeserializerContext f cv) aRef) = 
     let addr = arrayRefAddr aRef
-    in trace ("looking up cache at" ++ show addr)
+    in --trace ("looking up cache at" ++ show addr)
      modifyMVar cv (\c -> return $ (maybe (c, Nothing) $ \(e, c') -> (c', Just $ Cache.entryValue e)) $ Cache.lookup addr c) >>= 
      maybe 
      ((>>= \a -> evaluate a >>

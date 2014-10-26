@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, TupleSections, FlexibleContexts, FlexibleInstances, UndecidableInstances, GeneralizedNewtypeDeriving, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, TupleSections, FlexibleContexts, FlexibleInstances, UndecidableInstances, GeneralizedNewtypeDeriving, TypeFamilies, TypeOperators, StandaloneDeriving #-}
 
 module Database.Perdure.State(
   PState(stateLocation, stateSpace, stateRoot),
@@ -72,7 +72,8 @@ data CachedFile = CachedFile ReplicatedFile (MVar Cache)
 data RootLocation = RootLocation CachedFile [RootAddress]
 
 -- | A number which is incremented every time a state is written.
-newtype StateId = StateId Word64 deriving (Ord, Eq, Show, Enum, Bounded, Persistent, Num, Real, Integral)
+newtype StateId = StateId Word64 deriving (Ord, Eq, Show, Enum, Bounded, Num, Real, Integral)
+instance Persistent StateId where persister = structureMap persister
 
 newtype RootAddress = RootAddress {getRootAddress :: Address} deriving (Eq, Show)
 rootRef :: LgMultiple Word64 w => RootAddress -> BasicRef w
@@ -253,3 +254,4 @@ instance Space a => Allocator (StateAllocator a) where
 
 deriveStructured ''Root
 deriveStructured ''RootValues
+deriveStructured ''StateId

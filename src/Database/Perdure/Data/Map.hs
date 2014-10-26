@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE DeriveFunctor, ScopedTypeVariables, TemplateHaskell, DeriveDataTypeable, KindSignatures, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE DeriveFunctor, ScopedTypeVariables, TemplateHaskell, DeriveDataTypeable, KindSignatures, TypeFamilies, FlexibleContexts, Rank2Types #-}
 
 module Database.Perdure.Data.Map(
   Map,
@@ -41,7 +41,7 @@ import Control.Arrow
 import Data.Tuple
 import Data.Functor
 import Data.List(foldl')
-import Data.Lens
+import Control.Lens
 import Cgm.Data.Nat
 import Database.Perdure.Ref
 import Database.Perdure.Deref
@@ -59,9 +59,7 @@ moduleName = "Database.Perdure.Data.Map"
 data Map k a = Empty | NonEmpty !(Tree Leaf k a) deriving (Functor, Typeable)
 instance (Show k, Show a) => Show (Map k a) where show = show . toList
 
-newtype Reference t k a = Reference (R (t k a)) deriving Functor
-instance Typeable2 t => Typeable2 (Reference t) where 
-  typeOf2 _ = mkTyCon3 perdurePackage moduleName "Reference" `mkTyConApp` [typeOf2 (undefined :: t () ())]
+newtype Reference t k a = Reference (R (t k a)) deriving (Functor, Typeable)
 dereference :: Reference t k a -> t k a
 dereference (Reference t) = deref t
 reference :: t k a -> Reference t k a
@@ -74,9 +72,7 @@ data Tree t k a = LastLevel !(Upper t k a) | NextLevel !(Tree (Reference (Node t
 -- The k's are the maximum elements of the preceeding 'c'. The maximum element of the last 'c' is not stored but is passed from the context.
 data Node t k a = 
   Node2 {-# UNPACK #-} !(Upper t k a) !(t k a) | 
-  Node3 {-# UNPACK #-} !(Upper t k a) {-# UNPACK #-} !(Upper t k a) !(t k a) deriving (Functor)
-instance Typeable2 t => Typeable2 (Node t) where 
-  typeOf2 _ = mkTyCon3 perdurePackage moduleName "Node" `mkTyConApp` [typeOf2 (undefined :: t () ())]
+  Node3 {-# UNPACK #-} !(Upper t k a) {-# UNPACK #-} !(Upper t k a) !(t k a) deriving (Functor, Typeable)
 
 data Upper t k a = Upper !k !(t k a) deriving (Functor) -- The k is the largest key in (t k a)
 mapUpper :: (ta k a -> tb k b) -> Upper ta k a -> Upper tb k b
@@ -255,11 +251,18 @@ assocs = foldrWithKey (\k a l -> (k, a) : l) []
 elems :: Map k a -> [a]
 elems = fmap snd . assocs
 
-mapLens :: Ord k => k -> Lens (Map k a) (Maybe a)
-mapLens k = Lens $ \m -> store (\mv -> case mv of
-    Nothing -> delete k m
+type instance Index (Map k a) = k
+type instance IxValue (Map k a) = a
+instance Ord k => Ixed (Map k a)
+instance Ord k => Control.Lens.At (Map k a) where
+  at k f m = f mv <&> \r -> case r of
+    Nothing -> maybe m (const (delete k m)) mv
     Just v' -> insert k v' m
-  ) (lookup k m)
+    where mv = lookup k m
+  {-# INLINE at #-}
+
+mapLens :: Ord k => k -> Lens' (Map k a) (Maybe a)
+mapLens k = Control.Lens.at k
 
 instance (Eq k, Eq a) => Eq (Map k a) where
   a == b = toList a == toList b

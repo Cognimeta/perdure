@@ -33,7 +33,7 @@ module Database.Perdure.Rev(
 import Prelude()
 import Cgm.Prelude
 import Database.Perdure.Persistent
-import Data.Lens
+import Control.Lens hiding (At, at)
 import Data.Typeable
 
 infixr 1 :>
@@ -83,8 +83,8 @@ instance PersistentRev (b :> r) => Persistent (b :> r) where persister = revPers
 -- | This is not a legal lens since it violates the law which says that setting back what you got must have no effect.
 -- Here it is almost true since the only effect it has is to upgrade to the current representation, an idempotent change
 -- for a semantically equivalent value.                                                             
-latestLens :: (b -> a) -> Lens (a :> b) a
-latestLens toLatest = lens (toCurrent toLatest) (const . Current)
+latestLens :: (b -> a) -> Lens' (a :> b) a
+latestLens toLatest = lens (toCurrent toLatest) (const Current)
 
 -------------------------------------
 -- Below we intoduce a typeclass. It simplifies usage, but only works when types have unique predecessors
@@ -99,8 +99,8 @@ newtype Rev a = Rev (Revs a) deriving Typeable
 deriveStructured ''Rev
 instance (HasPrev a, PersistentRev (a :> Prev a)) => Persistent (Rev a) where persister = structureMap revPersister
 
-revLens :: HasPrev a => Lens (Rev a) a
-revLens = latestLens fromPrev . iso (\(Rev a)->a) Rev
+revLens :: forall a. HasPrev a => Lens' (Rev a) a
+revLens = iso (\(Rev a)->a) Rev . latestLens (fromPrev :: Prev a -> a)
 
 unrev :: HasPrev a => Rev a -> a
 unrev (Rev a) = toCurrent fromPrev a

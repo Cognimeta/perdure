@@ -22,9 +22,7 @@ import Data.Dynamic
 import Database.Perdure.Package
 
 
-data CRef r a = Refed !(r a) | ToRef !a
-instance (Typeable1 r, Typeable a) => Typeable (CRef r a) where 
-  typeOf _ = mkTyCon3 perdurePackage "Database.Perdure.CRef" "CRef" `mkTyConApp` [typeOf1 (undefined :: r ()), typeOf (undefined :: a)]
+data CRef r a = Refed !(r a) | ToRef !a deriving Typeable
                                                                                                                                                                     
 
 {-# INLINE onCRef #-}

@@ -20,8 +20,6 @@ module Database.Perdure(
   module Database.Perdure.Rev,
   module Database.Perdure.SizeRef,
   LocalStoreFile,
-  withRawDeviceStoreFiles,
-  withRawDeviceStoreFile,
   withFileStoreFile,
   ReplicatedFile(..),
   newCachedFile,
@@ -51,7 +49,7 @@ import Cgm.Data.Super
 import Cgm.Data.Len
 import Data.Word
 import Database.Perdure.ReplicatedFile(ReplicatedFile(..))
-import Database.Perdure.LocalStoreFile(withFileStoreFile, withRawDeviceStoreFile, withRawDeviceStoreFiles, LocalStoreFile)
+import Database.Perdure.LocalStoreFile(withFileStoreFile, LocalStoreFile)
 
 -- | Wraps a ReplicatedFile with a cache of a given size. The size is specified in bytes of serialized data, but the actual consumed
 -- size may be a few times larger since the cache contains the deserialized data, which is often less compact than its serialized
