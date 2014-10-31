@@ -5,7 +5,7 @@ Robust persistence for typed immutable data
 
 Perdure(TM), a Cognimeta product, aims to provide a simple and robust persistence mechanism for acyclic immutable data with an easily comprehensible cost-model. It persists to file or to raw block devices.
 
-It is currently available for Haskell and is in the process of being ported to Scala.
+It is currently available for Haskell and is ***in the process of being ported to Scala***.
 
 For some classes of applications, it can replace the use of traditional DMBS and keep the data modelled in a manner that is natural for purely functional languages. It offers nearly orthogonal persistence, minimizing the scope of changes required to make an application persistent.
 
