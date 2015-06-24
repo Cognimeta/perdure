@@ -145,11 +145,6 @@ extra-tmp-files:
 library
   buildable: True
   hs-source-dirs: src
-  if arch(i386)
-    cpp-options: -DWORDSIZE=32
-  if arch(x86_64)
-    cpp-options: -DWORDSIZE=64
-  extensions: CPP
   exposed-modules:
     Database.Perdure
     Database.Perdure.Data.Map
@@ -192,7 +187,7 @@ library
   build-depends:
     base >= 4.5.0.0 && < 5,
     template-haskell >= 2.7.0.0,
-    cognimeta-utils >= 0.1.4,
+    cognimeta-utils >= 0.1.5,
     QuickCheck >=2.4.0.1,
     strict >= 0.3.2,
     mtl >= 2.1.2,
@@ -215,7 +210,8 @@ library
     comonad >=4.2.2 && <4.3,
     perdure-file >=0.0.2 && <0.1
 
-  ghc-options: -rtsopts -Wall -fno-warn-orphans -fcontext-stack=80 -O2 -funfolding-use-threshold=24 -pgmP cpphs -optP --cpp
+  ghc-options: -rtsopts -Wall -fno-warn-orphans -fcontext-stack=80 -O2 -funfolding-use-threshold=24
+-- -pgmP cpphs -optP --cpp
   extensions: 
 
 source-repository head
@@ -233,7 +229,7 @@ executable perdure
   build-depends:
     base >= 4.5.0.0,
     template-haskell >= 2.7.0.0,
-    cognimeta-utils >= 0.1.4,
+    cognimeta-utils >= 0.1.5,
     mtl >= 2.1.2,
     QuickCheck >=2.4.0.1,
     perdure >= 0.3.0,

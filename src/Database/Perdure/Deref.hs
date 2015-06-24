@@ -11,7 +11,7 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 or implied. See the License for the specific language governing permissions and limitations under the License.
 -}
 
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables #-}
 
 
 module Database.Perdure.Deref (
@@ -48,7 +48,7 @@ derefEq :: (Deref r, Eq a) => r a -> r a -> Bool
 derefEq = (==) `dot2i` deref
 
 instance Deref DRef where 
-  derefIO (DRef p dc@(DeserializerContext f cv) aRef) = 
+  derefIO dref@(DRef p dc@(DeserializerContext f cv) aRef) = 
     let addr = arrayRefAddr aRef
     in --trace ("looking up cache at" ++ show addr)
      modifyMVar cv (\c -> return $ (maybe (c, Nothing) $ \(e, c') -> (c', Just $ Cache.entryValue e)) $ Cache.lookup addr c) >>= 
@@ -57,9 +57,10 @@ instance Deref DRef where
                  (a <$ modifyMVar_ cv (evalRandIO . trace ("adding to cache at" ++ show addr) .
                                        Cache.insert addr (Cache.Entry (toDyn a) $ arrayRefSize aRef)))) $
       fmap (maybe (error "Read error") $ deserializeFromFullArray (cDeser p dc) . (id :: Id (ArrayRange (PrimArray Free Word)))) $
+      (fmap $ trace $ "Deserializing array from " ++ showDRef dref) $
       derefArrayRef f aRef)
      (return . fromMaybe (error $ "Wrong type in cache cell " ++ show addr) . fromDynamic)
-    
+
 instance Show a => Show (DRef a) where show = show . deref
 instance Eq a => Eq (DRef a) where (==) = derefEq
 

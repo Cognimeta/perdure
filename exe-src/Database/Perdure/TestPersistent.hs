@@ -39,6 +39,7 @@ import Database.Perdure
 import Database.Perdure.Internal
 import Database.Perdure.TestState
 import Test.QuickCheck
+import Test.QuickCheck.Gen.Unsafe
 import Test.QuickCheck.Property
 import qualified Database.Perdure.Data.Map as PMap
 

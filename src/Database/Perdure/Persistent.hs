@@ -27,7 +27,8 @@ or implied. See the License for the specific language governing permissions and 
   UndecidableInstances, 
   DeriveFunctor, 
   DeriveDataTypeable,
-  RoleAnnotations #-}
+  RoleAnnotations,
+  StandaloneDeriving #-}
 
 module Database.Perdure.Persistent (
   Persister(..),
@@ -57,7 +58,8 @@ module Database.Perdure.Persistent (
   Ref0(..),
   CDRef,
   Cache,
-  module Cgm.Data.Structured
+  module Cgm.Data.Structured,
+  showDRef
 ) where
 
 import Prelude ()
@@ -93,8 +95,9 @@ import Data.Functor.Identity
 import qualified Data.ByteString as S
 
 data WordNArrayRef v (r :: * -> *) = WordNArrayRef !v !(r (ValidatedElem v)) !Endianness
+deriving instance (Show (r (ValidatedElem v)), Show v) => Show (WordNArrayRef v r)
 
-data WordArrayRef r32 r64 (r :: * -> *) = Word32ArrayRef !(r32 r) | Word64ArrayRef !(r64 r)
+data WordArrayRef r32 r64 (r :: * -> *) = Word32ArrayRef !(r32 r) | Word64ArrayRef !(r64 r) deriving Show
 
 type WArrayRef = WordArrayRef (WordNArrayRef W32Validator) (WordNArrayRef W64Validator)
 
@@ -102,6 +105,11 @@ data DeserializerContext = forall f. (StoreFile f, StoreRef f ~ BasicRef) => Des
 
 data DRef a where
   DRef :: Typeable a => !(Persister a) -> !DeserializerContext -> !(WArrayRef BasicRef) -> DRef a deriving Typeable
+showDRef :: DRef a -> String
+showDRef (DRef p dc a) = "(DRef " ++ show a ++ " of type " ++ show (typeOfPersister p) ++ " )"
+
+typeOfPersister :: forall a. Typeable a => Persister a -> TypeRep
+typeOfPersister _ = typeOf (undefined :: a)
 
 class LgPersistent1_ (r :: * -> *) where lgPersister1_ :: (LgMultiple Word64 w) => Persister (r w)
 

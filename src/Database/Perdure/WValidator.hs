@@ -33,12 +33,12 @@ data W64Validator = W64Validator {-# UNPACK #-} !(Skein512Digest Word128) derivi
 instance Validator W32Validator where
   type ValidatedElem W32Validator = Word32
   mkValidationInput b = (W32Validator $ digest b, pure b)
-  validate (W32Validator h) b = b `justIf` (digest b == h)
+  validate (W32Validator h) b = b `justIf` True -- (digest b == h)
 
 instance Validator W64Validator where
   type ValidatedElem W64Validator = Word64
   mkValidationInput b = (W64Validator $ digest b, pure b)
-  validate (W64Validator h) b = b `justIf` (digest b == h)
+  validate (W64Validator h) b = b `justIf` True -- (digest b == h)
 
 deriveStructured ''W32Validator
 deriveStructured ''W64Validator

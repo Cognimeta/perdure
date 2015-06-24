@@ -32,6 +32,9 @@ import Database.Perdure.StoreFile
 import Database.Perdure.CRef
 import Cgm.Data.Word
 import Data.Bits
+import Debug.Trace
+import Cgm.Debug.Trace
+import Data.Dynamic
 
 -- TODO figure out why the Deserializer's Allocator df is free to differ from f. Why is it a type argument of Deserializer at all if it can be anything?
 
@@ -58,15 +61,19 @@ cDeser p = case p of
   EitherPersister pa pb -> \dc -> cDeser persister dc >>= bool (Left <$> cDeser pa dc) (Right <$> cDeser pb dc)
   ViewPersister i pb -> flip functorIacomap i . cDeser pb
   SummationPersister pi' d _ -> \dc -> cDeser pi' dc >>= d (\pb ba -> fmap ba $ cDeser pb dc)
-  DRefPersister' -> \dc -> DRef persister dc <$> cDeser persister dc 
+  DRefPersister' -> \dc -> (\dref -> trace ("Creating " ++ showDRef dref) dref) <$> DRef persister dc <$> cDeser persister dc 
   CRefPersister' _ pra -> fmap Refed . cDeser pra
-  
+
+typeOfPersister :: forall a. Typeable a => Persister a -> TypeRep
+typeOfPersister _ = typeOf (undefined :: a)
+
 instance InjectionACofunctor (Deserializer f) where
   {-# INLINE iacomap #-}
   iacomap = functorIacomap
 
 bitDeserializer :: Deserializer f Word
-bitDeserializer = Deserializer $ \b ar -> DeserOut (let (wIx, bIx) = coarseRem b in (indexArray ar wIx `partialShiftRL` getLen bIx) .&. 1) (b + 1)
+bitDeserializer = Deserializer $ \b ar ->
+  DeserOut {-(traceF (("Bit " ++) . show)-} (let (wIx, bIx) = coarseRem b in (indexArray ar wIx `partialShiftRL` getLen bIx) .&. 1) (b + 1)
 
 -- 0 <= n <= wordBits
 partialWordDeserializer :: Len Bool Word -> Deserializer f Word
