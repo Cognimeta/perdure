@@ -35,6 +35,7 @@ import Cgm.Data.WordN
 import Control.Monad.Error
 import Data.Ix
 import Data.Word
+import Data.Bool
 import Database.Perdure
 import Database.Perdure.Internal
 import Database.Perdure.TestState

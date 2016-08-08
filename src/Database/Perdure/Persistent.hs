@@ -66,6 +66,7 @@ import Prelude ()
 import Cgm.Prelude
 import Data.Word
 import Data.Int
+import Data.Bool
 import Cgm.Data.WordN
 import Cgm.Data.Word
 import Cgm.Data.Len
@@ -296,8 +297,8 @@ wordPersister :: Persister Word -- Do not export to user, Word is platform depen
 wordPersister = PartialWordPersister wordBits
 
 -- prefer wordPersister when writing a full word
--- unsafe because (bitSize a) size must not exceed Word size
-unsafeBitsPersister :: forall a. (Bits a, Integral a) => Persister a
+-- unsafe because (finiteBitSize a) size must not exceed Word size
+unsafeBitsPersister :: forall a. (FiniteBits a, Integral a) => Persister a
 unsafeBitsPersister = PartialWordPersister ((at :: At a) bitSizeLen) `iacomap` unsafeIntegralAsWord
 
 -- unsafe because (bitSize a) size must not exceed Word size

@@ -19,6 +19,7 @@ module Database.Perdure.SpaceTree(
 
 import Prelude()
 import Cgm.Prelude
+import Data.Bool
 import Data.Word
 import Cgm.Data.Maybe
 import Cgm.Control.Monad.State

@@ -42,6 +42,7 @@ import Database.Perdure.WordArrayRef()
 import Database.Perdure.WordNArrayRef()
 import qualified Database.Perdure.Cache as Cache
 import Cgm.Data.MapMultiset
+import Data.Bool
 import Data.Dynamic
 import Control.Monad.Random
 

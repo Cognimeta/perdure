@@ -41,7 +41,7 @@ import Control.Arrow
 import Data.Tuple
 import Data.Functor
 import Data.List(foldl')
-import Control.Lens
+import Control.Lens hiding (Empty)
 import Cgm.Data.Nat
 import Database.Perdure.Ref
 import Database.Perdure.Deref

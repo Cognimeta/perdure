@@ -32,6 +32,7 @@ import Database.Perdure.StoreFile
 import Database.Perdure.CRef
 import Cgm.Data.Word
 import Data.Bits
+import Data.Bool
 import Debug.Trace
 import Cgm.Debug.Trace
 import Data.Dynamic
