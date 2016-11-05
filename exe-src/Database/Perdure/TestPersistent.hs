@@ -32,7 +32,7 @@ import Cgm.Data.Nat
 import Cgm.Data.Super
 import Cgm.Data.Typeable
 import Cgm.Data.WordN
-import Control.Monad.Error
+import Control.Monad.Except
 import Data.Ix
 import Data.Word
 import Data.Bool
@@ -62,7 +62,7 @@ instance (Persistent a, Typeable a, Arbitrary a) => Arbitrary (TestTree a) where
 instance (Persistent a, Typeable a) => Persistent (TestTree a) where persister = structureMap persister
 
 writeReadTestFile :: (Eq a, Persistent a, Typeable a) => a -> String -> IO Bool
-writeReadTestFile a name = fmap fromRight $ runErrorT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
+writeReadTestFile a name = fmap fromRight $ runExceptT $ withFileStoreFile name $ (. (ReplicatedFile . pure)) $ \f -> do
   putCpuTime "Data creation" $ evaluate $ prnf persister a
   putCpuTime "Write time" $ (() <$) $
     newCachedFile 1000000 f >>=

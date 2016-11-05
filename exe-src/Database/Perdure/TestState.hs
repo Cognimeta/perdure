@@ -26,7 +26,7 @@ import Data.Word
 import Test.QuickCheck
 import Test.QuickCheck.Property
 import Cgm.Control.Monad.State
-import Control.Monad.Error hiding (sequence_)
+import Control.Monad.Except hiding (sequence_)
 import Cgm.Data.Super
 import Cgm.Data.Nat
 import Control.Monad.Random
@@ -42,7 +42,7 @@ instance (Persistent a, Typeable a) => Persistent (RList a) where persister = st
 
 testStates  :: a -> IO ()
 testStates _ =
-  quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runErrorT $ (True <$) $
+  quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runExceptT $ (True <$) $
   withReplicatedFiles "testStates" testStatesF
 
 testStatesF :: ReplicatedFile -> IO ()
@@ -53,10 +53,10 @@ testStatesF f =
       print c
       updatePVar v $ replicateM_ 5000 $ modify $ ConsRList (c :: Word32) . ref
 
-withReplicatedFiles :: String -> (ReplicatedFile -> IO a) -> ErrorT String IO a
-withReplicatedFiles n z = ErrorT $ fmap join $
-                         runErrorT $ withFileStoreFile (n ++ "0.dag") $ \f0 ->
-                         runErrorT $ withFileStoreFile (n ++ "1.dag") $ \f1 ->
+withReplicatedFiles :: String -> (ReplicatedFile -> IO a) -> ExceptT String IO a
+withReplicatedFiles n z = ExceptT $ fmap join $
+                         runExceptT $ withFileStoreFile (n ++ "0.dag") $ \f0 ->
+                         runExceptT $ withFileStoreFile (n ++ "1.dag") $ \f1 ->
                          z $ ReplicatedFile [f0, f1]
 
 ----------
@@ -84,7 +84,7 @@ dagBuild d = fmap (Dag . ref) $ Cgm.Prelude.sequence $ replicate 10 (dagElem' d)
 
 testStatesDag  :: a -> IO ()
 testStatesDag _ =
-  quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runErrorT $ (True <$) $
+  quickCheckWith (Args Nothing 1 1 1 True) $ morallyDubiousIOProperty $ (>>= either fail return) $ runExceptT $ (True <$) $
   withReplicatedFiles "testStatesDag" $ \f -> 
   newCachedFile 1000000 f >>=
   createPVar (Dag $ ref []) (mega 100) . defaultRootLocation >>= \v ->
